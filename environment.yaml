@@ -1,0 +1,22 @@
+# Installing `conda` packages in a separate `/opt/conda` directory to not clash
+# with pre-installed Python packages, which are installed via the system Python.
+# If additional `pip` packages are needed, install them in `/opt/conda` as well.
+# The same version of Python is used in the `conda` installation as in the
+# system Python found in the image, so there should be no compatibility issues.
+name: extras
+channels:
+  - nodefaults # Do not use the default channel.
+  - conda-forge # Always use conda-forge instead.
+dependencies: # Use conda packages if possible.
+  - beartype
+  - fire
+  - hydra-core
+  - loguru
+  # Habana DeepSpeed is installed in the Docker image.
+  - pip  # For `pip` dependencies that are not available in conda.
+  - pip:
+      - datasets
+      - transformers
+      - pyre-check
+      # Modify the version tag, e.g. `main`, as necessary.
+      - git+https://github.com/huggingface/optimum-habana@v1.13.2

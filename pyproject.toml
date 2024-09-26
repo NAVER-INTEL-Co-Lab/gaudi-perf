@@ -1,0 +1,92 @@
+#[tool.black]
+#line-length = 100
+#target-version = ['py310', 'py311']
+#include = '\.pyi?$'
+# Black excludes files in `.gitignore` if no `exclude` is specified.
+# https://black.readthedocs.io/en/stable/usage_and_configuration/file_collection_and_discovery.html#gitignore
+
+
+[tool.pytest.ini_options]
+minversion = "7.3.0"
+addopts = """\
+    --capture=tee-sys \
+    --doctest-modules \
+    --doctest-continue-on-failure \
+    -ra \
+"""
+log_cli = true
+testpaths = [
+    "tests",
+]
+
+
+[tool.ruff]
+line-length = 100
+target-version = 'py310'
+select = [
+#    "A", # flake8-builtins
+#    "ARG", # flake8-unused-arguments
+    "B", # flake8-bugbear
+    "BLE", # flake8-blind-except
+    "C4", # flake8-comprehensions
+    "C90", # mccabe
+#    "COM", # flake8-commas
+#    "D", # pydocstyle
+    "E", # pycodestyle errors
+#    "EM", # flake8-errmsg
+    "F", # pyflakes
+    "G010", # logging-warn
+    "I", # isort
+    "ICN", # flake8-import-conventions
+    "ISC", # flake8-implicit-str-concat
+#    "N", # PEP8-Naming
+    "NPY", # NumPy-specific rules
+    "PD", # pandas-vet
+    "PIE", # flake8-pie
+    "PLC", # Pylint Convention
+    "PLE", # Pylint Error
+#    "PLR", # Pylint Refactor
+    "PLW", # Pylint Warning
+    "PT", # flake8-pytest-style
+    "RSE", # flake8-raise
+    "RUF",  # Ruff-specific rules
+    "SIM", # flake8-simplify
+    "T10", # flake8-debugger
+    "TCH", # flake8-type-checking
+    "TID", # flake8-tidy-imports
+    "TRY", # tryceratops
+#    "UP", # PyUpgrade
+    "W", # pycodestyle warnings
+    "YTT",  # flake8-2020
+]
+ignore = [
+  "C408", # unnecessary-collection-call
+  "E501", # line length violations
+]
+# Enable autofix behavior by-default when running `ruff`.
+fix = true
+# By default, always enumerate fixed violations.
+show-fixes = true
+# By default, always show source code snippets.
+show-source = true
+# Respect file exclusions via `.gitignore` and other standard ignore files.
+respect-gitignore = true
+# Avoid automatically removing unused imports in `__init__.py` files.
+ignore-init-module-imports = true
+
+[tool.ruff.isort]
+lines-after-imports = 2
+
+[tool.ruff.pycodestyle]
+# PEP8 states sets maximum documentation length to 72 but this is
+# too short for many people. Using 80 as in the Google Style Guide.
+max-doc-length = 80
+
+[tool.ruff.per-file-ignores]
+# Ignore `E402` (import violations) in all `__init__.py` files.
+"__init__.py" = ["E402"]
+"*test*.py" = ["D"] # Ignore all docstring lints in tests.
+
+[tool.ruff.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10

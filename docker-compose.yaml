@@ -1,0 +1,111 @@
+# Requires Docker Compose V2.
+# See https://docs.docker.com/compose/compose-file/compose-file-v3
+# and https://github.com/compose-spec/compose-spec/blob/master/spec.md
+# for details concerning the `docker-compose.yaml` file syntax.
+
+# Using `docker-compose.yaml` has many advantages over writing custom shell scripts.
+# The settings are much easier to see and maintain than scattered shell scripts.
+# Also, Compose is a native Docker component, simplifying project maintenance.
+
+# Run `make env` to create a basic `.env` file with the UID and GID variables.
+# Variables are in ${VARIABLE:-DEFAULT_VALUE} format to specify default values.
+# Using the `.env` file to set variables to non-default values is strongly recommended.
+# Note that the host shell has higher priority than `.env` for Docker Compose.
+# https://docs.docker.com/compose/environment-variables/envvars-precedence
+
+# Variables specified via Docker Compose have higher priority than those
+# specified in the Dockerfile, which only function as default values.
+# All default values in the Dockerfile are overridden by default values in Compose.
+
+# Set the host environment variable `BUILDKIT_PROGRESS=plain` to see the full build log.
+# https://github.com/docker/cli/blob/master/docs/reference/commandline/cli.md#environment-variables
+
+networks: # Use the host network instead of creating a separate network.
+  default: # This reduces load and conflicts with the host network.
+    name: host # This may cause security issues in production, however.
+    external: true
+
+services:
+  base: # Base service containing configurations common to all services.
+    tty: true # Equivalent to `-t` flag in `docker run`.
+    init: true # Equivalent to `--init` flag in `docker run`.
+    stdin_open: true # equivalent to `-i` flag in `docker run`.
+    working_dir: ${PROJECT_ROOT:-/opt/project}
+    user: ${UID:-1000}:${GID:-1000} # Specify USR/GRP at runtime.
+    # Use different image names for different users and projects.
+    # Otherwise, images will be repeatedly removed and recreated.
+    # The removed images will remain cached, however.
+    image: ${IMAGE_NAME}
+    network_mode: host # Use the same network as the host, may cause security issues.
+    # `ipc: host` removes the shared memory cap but is a known security vulnerability.
+    ipc: host # Equivalent to `--ipc=host` in `docker run`. **Disable this on WSL.**
+    # shm_size: 1GB  # Explicit shared memory limit. No security issues this way.
+
+    # Common environment variables for the container runtime. No effect on build.
+    environment: # Equivalent to `--env`
+      HISTSIZE: 50000 # Hard-coded large command history size.
+      TZ: ${TZ:-UTC} # Timezone settings used during runtime.
+    tmpfs:  # Create directory in RAM for fast data IO.
+      - /opt/data
+    # Default volume pairings of ${HOST_PATH}:${CONTAINER_PATH}.
+    # Allows the container to access `HOST_PATH` as `CONTAINER_PATH`.
+    # See https://docs.docker.com/storage/volumes for details.
+    # Always use the ${HOME} variable to specify the host home directory.
+    # See https://github.com/docker/compose/issues/6506 for details.
+    volumes: # Equivalent to `-v` flag in `docker run`.
+      # Current working directory `.` is connected to `PROJECT_ROOT`.
+      # Mount `.` if the docker-compose.yaml file is at the project root.
+      # Mount `..` if Cresset is a subdirectory in a different project, etc.
+      - ${HOST_ROOT:-.}:${PROJECT_ROOT:-/opt/project}
+      # Preserve VSCode extensions between containers.
+      # Assumes default VSCode server directory.
+      # May cause VSCode issues if multiple Cresset-based projects are on the
+      # same machine writing to the `${HOME}/.vscode-server` directory.
+      # If so, specify a different host directory for each project.
+      - ${HOME}/.vscode-server:/home/${USR:-user}/.vscode-server
+
+    build:
+      context: . # Nearly all files are ignored due to `.dockerignore` settings.
+      target: ${TARGET_STAGE:-train} # Specify the `Dockerfile` target build stage.
+      args: # Common build-time environment variables.
+        # Even if these variables are unnecessary during the build,
+        # they can be ignored simply by not defining them in that stage.
+        ADD_USER: ${ADD_USER:-include} # Whether to create a new sudo user in the image.
+        PROJECT_ROOT: ${PROJECT_ROOT:-/opt/project}
+        GID: ${GID:-1000}
+        UID: ${UID:-1000}
+        GRP: ${GRP:-user}
+        USR: ${USR:-user}
+        TZ: ${TZ:-UTC}
+        TMUX_HIST_LIMIT: 50000
+        # Change the `CONDA_URL` for different hardware architectures.
+        # URLs from https://github.com/conda-forge/miniforge are recommended over
+        # Miniconda URLs from https://docs.conda.io/en/latest/miniconda.html.
+        # The `CONDA_MANAGER` may be either `mamba` (the default) or `conda`.
+        # However, `mamba` may be unable to resolve conflicts that `conda` can.
+        # In such cases, set `CONDA_MANAGER=conda` for conda-based installation.
+        # Installing `mamba` via mini-forge is strongly recommended.
+        CONDA_URL: ${CONDA_URL:-https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh}
+        CONDA_MANAGER: ${CONDA_MANAGER:-mamba}
+
+  gaudi:  # Gaudi-specific configurations.
+    extends:
+      service: base  # Inherit from the `base` service.
+    runtime: habana
+    cap_add: # Grant the container the CAP_SYS_NICE capability.
+      - sys_nice
+    environment:
+      OMPI_MCA_btl_vader_single_copy_mechanism: none
+      PT_HPU_ENABLE_LAZY_COLLECTIVES: true
+      # Specify which HPU to use.
+      HABANA_VISIBLE_DEVICES: ${HABANA_VISIBLE_DEVICES:-all}
+      # Enable when using DeepSpeed.
+     # PT_HPU_MAX_COMPOUND_OP_SIZE: 1024
+     # PT_HPU_POOL_MEM_ACQUIRE_PERC: 100
+    build:
+      dockerfile: Dockerfile
+      args:
+        OS: ${OS:-ubuntu22.04}
+        PYTORCH_VERSION: ${PYTORCH_VERSION:-2.2.2}
+        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-1.16.2}
+        IMAGE_TAG: ${IMAGE_TAG:-latest}
