@@ -1,7 +1,7 @@
-## Results for Llama v3.1 70B
+## Results for Llama v3.1 70B (BF16)
 
 | Model Name | Batch Size | Input Sequence Length |  Latency (ms)  | TP Degree | Synapse AI Version | Mean TFLOPS | Peak TFLOPS | MFU | Mean TFLOPS/HPU |
-|---|---|---|---|---|---|---|---|---|---|
+|:---:|---:|---:|---:|:---:|:---:|---:|---:|---|---:|
 | Llama v3.1 70B | 1 | 1024 |    295  | 2 | 1.17.0.495 | 557.2 | 432 | 64% | 278.6 |
 | Llama v3.1 70B | 1 | 1024 |    170  | 4 | 1.17.0.495 | 969.0 | 432 | 56% | 242.3 |
 | Llama v3.1 70B | 1 | 1024 |    152  | 8 | 1.17.0.495 | 1083.5 | 432 | 31% | 135.4 |
