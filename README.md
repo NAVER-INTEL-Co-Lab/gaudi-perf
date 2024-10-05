@@ -15,3 +15,11 @@ Visit https://github.com/NAVER-INTEL-Co-Lab/gaudi-cresset for detailed setup ins
 2. Run `make build` to build the Docker image and start the container.
 Run this command when you wish to rebuild the Docker image.
 3. Run `make exec` to enter an existing Docker container.
+
+
+## Getting started
+
+For instructions on matrix multiplication throughput measurements,
+visit the `matmul` directory. Commands are described in their respective files.
+
+To measure prefill throughputs for Llama models, visit the `prefill` directory.
