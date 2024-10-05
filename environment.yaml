@@ -15,8 +15,5 @@ dependencies: # Use conda packages if possible.
   # Habana DeepSpeed is installed in the Docker image.
   - pip  # For `pip` dependencies that are not available in conda.
   - pip:
-      - datasets
-      - transformers
-      - pyre-check
       # Modify the version tag, e.g. `main`, as necessary.
       - git+https://github.com/huggingface/optimum-habana@v1.13.2
