@@ -117,4 +117,4 @@ def measure(num_steps: int = 64, fp8_config: str = "E4M3", scale_method: str = "
     kwargs = dict(num_steps=num_steps, fp8_config=fp8_config, scale_method=scale_method)
     for m, k, n in mkn:
         prof_matmul(m, k, n, measure_mode=True, **kwargs)
-        prof_matmul(m, k, n, measure_mode=False **kwargs)
+        prof_matmul(m, k, n, measure_mode=False, **kwargs)
