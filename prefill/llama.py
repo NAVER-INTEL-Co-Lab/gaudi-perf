@@ -166,4 +166,5 @@ def main(model_name: str, seq_len: int = 4096, num_steps: int = 32):
         "Use HPU Graph": hpu_graph
     })
     dist.destroy_process_group()
-    pprint(info)  # Only show the results from the main process.
+    if local_rank == 0:  # Only show the results from the main process.
+        pprint(info)
