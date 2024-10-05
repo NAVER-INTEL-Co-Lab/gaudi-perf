@@ -104,7 +104,7 @@ def prof_matmul(
             f"Mean {mean(tfps):6.1f} TFLOPS, "
             f"Min {min(tfps):6.1f} TFLOPS, "
             f"Max {max(tfps):6.1f} TFLOPS, "
-            f"STDEV {stdev(tfps):6.1f} TFLOPS, "
+            f"STDEV {stdev(tfps):4.1f} TFLOPS, "
             f"Gaudi v2 MFU: {mean(tfps)/865*100:4.1f}%, "
             f"Gaudi v3 MFU: {mean(tfps)/1835*100:4.1f}%"
         )

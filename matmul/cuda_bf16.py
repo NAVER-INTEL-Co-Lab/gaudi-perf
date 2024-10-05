@@ -46,7 +46,7 @@ def measure(num_steps: int = 256):
             f"Mean {mean(tfps):5.1f} TFLOPS, "
             f"Min {min(tfps):5.1f} TFLOPS, "
             f"Max {max(tfps):5.1f} TFLOPS, "
-            f"STDEV {stdev(tfps):7.3f} TFLOPS, "
+            f"STDEV {stdev(tfps):4.1f} TFLOPS, "
             f"A100 MFU: {mean(tfps)/312*100:4.1f}%, "
             f"H100 MFU: {mean(tfps)/989.4*100:4.1f}%"
         )

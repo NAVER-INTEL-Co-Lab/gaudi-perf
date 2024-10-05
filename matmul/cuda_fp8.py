@@ -67,6 +67,6 @@ def measure(
             f"Mean {mean(tfps):6.1f} TFLOPS, "
             f"Min {min(tfps):6.1f} TFLOPS, "
             f"Max {max(tfps):6.1f} TFLOPS, "
-            f"STDEV {stdev(tfps):6.1f} TFLOPS, "
+            f"STDEV {stdev(tfps):4.1f} TFLOPS, "
             f"H100 MFU: {mean(tfps)/1978.9*100:4.1f}%"
         )
