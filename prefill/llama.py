@@ -168,4 +168,4 @@ def main(model_name: str, seq_len: int = 4096, num_steps: int = 32):
     dist.destroy_process_group()
     if local_rank == 0:  # Only show the results from the main process.
         pprint(info)
-        print(f"Mean TFLOPS/HPU: {info["Model Mean TFLOPS"] / world_size:.1f} TFLOPS")
+        print(f"Mean TFLOPS/HPU: {info['Model Mean TFLOPS'] / world_size:.1f} TFLOPS")
