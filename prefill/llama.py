@@ -1,11 +1,12 @@
 """
 Login to HuggingFace with `huggingface-cli login` if a gated repo is to be used.
 
-Example run command:
+Example run command below.
 
-    deepspeed --no_local_rank --num_gpus 8 \
-        --module fire prefill/llama.py main \
-        --model_name meta-llama/Llama-3.1-70B
+deepspeed --no_local_rank --num_gpus 8 \
+    --module fire prefill/llama.py main \
+    --model_name meta-llama/Llama-3.1-70B
+
 """
 import os
 from pprint import pprint
@@ -117,15 +118,15 @@ def measure(
         "Model Name": full_name,
         "Batch Size": batch_size,
         "Input Sequence Length": seq_len,
-        "Average Latency (milliseconds)": mean(mss),
+        "Average Latency (milliseconds)": round(mean(mss)),
         "Synapse AI Version": get_habana_frameworks_version(),
         "PyTorch Version": torch.__version__,
         "DeepSpeed Version": deepspeed.__version__,
-        "Mean Tokens per Second": mean(tkps),
-        "Model Mean TFLOPS": mean(tfps),
-        "Model Min TFLOPS": min(tfps),
-        "Model Max TFLOPS": max(tfps),
-        "Model STDEV TFLOPS": stdev(tfps),
+        "Mean Tokens per Second": round(mean(tkps), ndigits=1),
+        "Model Mean TFLOPS": round(mean(tfps), ndigits=1),
+        "Model Min TFLOPS": round(min(tfps), ndigits=1),
+        "Model Max TFLOPS": round(max(tfps), ndigits=1),
+        "Model STDEV TFLOPS": round(stdev(tfps), ndigits=1),
     }
     return info
 
