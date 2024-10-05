@@ -55,7 +55,6 @@ def prof_matmul(
         "dump_stats_path": f"./inc_output/{fp8_config}_{scale_method}_{m}_{k}_{n}"
     })
 
-    print("Initializing.")
     a = torch.randn(size=(m, k), device="hpu")
     # The Sequential layer is necessary because INC cannot take a single module.
     model = nn.Sequential(nn.Linear(in_features=k, out_features=n, bias=False, device="hpu"))
@@ -74,8 +73,6 @@ def prof_matmul(
         model_quant = convert(model, config_quantize)
         htcore.hpu_inference_initialize(model_quant, mark_only_scales_as_const=True)
         model_quant = ht.hpu.wrap_in_hpu_graph(model_quant)
-
-        print("Starting quantized run.")
 
         for _ in range(16):  # Warmup
             model_quant(a)
