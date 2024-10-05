@@ -1,3 +1,12 @@
+"""
+Login to HuggingFace with `huggingface-cli login` if a gated repo is to be used.
+
+Example run command:
+
+    deepspeed --no_local_rank --num_gpus 8 \
+        --module fire prefill/llama.py main \
+        --model_name meta-llama/Llama-3.1-70B
+"""
 import os
 from pprint import pprint
 from statistics import mean, stdev
@@ -141,7 +150,6 @@ def main(model_name: str, seq_len: int = 4096, num_steps: int = 32):
         tensor_parallel={"tp_size": world_size},
         enable_cuda_graph=hpu_graph,
         set_empty_params=True,  # Initialize empty parameters from meta-tensors.
-        checkpoint=None,
     )
 
     info = measure(

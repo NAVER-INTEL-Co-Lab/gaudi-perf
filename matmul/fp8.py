@@ -37,7 +37,7 @@ def prof_matmul(
         scale_method: str = "maxabs_hw",
         measure_mode: bool = True,
 ):
-    logging.disable(logging.WARNING)
+    logging.disable(logging.WARNING)  # No logging for the demo.
     config_measure = FP8Config.from_dict({
         "fp8_config": fp8_config,
         "mode": "MEASURE",
