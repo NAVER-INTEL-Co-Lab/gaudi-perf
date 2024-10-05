@@ -54,7 +54,7 @@ def prof_matmul(
     # Using the exact TFLOPS equation.
     tfps = [1e-9 * m * n * (2 * k - 1) / ms for ms in mss]
     print(
-        f"({m:6}x{k:6})x({k:6}x{n:6}): "
+        f"({m:5} x {k:5})x({k:5}x{n:5}): "
         f"Mean {mean(tfps):5.1f} TFLOPS, "
         f"Min {min(tfps):5.1f} TFLOPS, "
         f"Max {max(tfps):5.1f} TFLOPS, "
