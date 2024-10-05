@@ -197,4 +197,4 @@ ENV PYTHONPATH=${PYTHONPATH}:/usr/local/lib/python3/dist-packages
 ENV PYTHONPATH=${PYTHONPATH}:/opt/conda/lib/python3/site-packages
 
 WORKDIR ${PROJECT_ROOT}
-CMD ["/bin/zsh"]
+CMD ["/usr/bin/zsh"]
