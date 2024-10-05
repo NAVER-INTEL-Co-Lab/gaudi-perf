@@ -7,6 +7,10 @@ This repository contains code to reproduce performance numbers for the Intel Gau
 Specifically, code is available to measure the throughput for matrix multiplication
 (BF16 and FP8) and the prefill stage of Llama models.
 
+In addition, we also provide code for users to reproduce throughput numbers for NVIDIA
+GPUs such as the A100 and the H100. However, setting up the necessary
+development environments is left to the user.
+
 ## Setup
 
 Visit https://github.com/NAVER-INTEL-Co-Lab/gaudi-cresset for detailed setup instructions.
