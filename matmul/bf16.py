@@ -1,6 +1,6 @@
 """
 Run `python -m fire matmul/bf16.py measure` to run for the provided shapes.
-Run `python -m fire matmul/bf16.py prof_matmul $m $k $n` for arbitrary shapes.
+Run `python -m fire matmul/bf16.py prof_matmul $m $k $n` for user provided shapes.
 """
 from statistics import mean, stdev
 
@@ -58,8 +58,9 @@ def prof_matmul(
         f"Mean {mean(tfps):5.1f} TFLOPS, "
         f"Min {min(tfps):5.1f} TFLOPS, "
         f"Max {max(tfps):5.1f} TFLOPS, "
-        f"STDEV {stdev(tfps):7.3f} TFLOPS, "
-        f"MFU: {mean(tfps)/432*100:4.1f}%"
+        f"STDEV {stdev(tfps):4.1f} TFLOPS, "
+        f"Gaudi v2 MFU: {mean(tfps)/432*100:4.1f}%, "
+        f"Gaudi v3 MFU: {mean(tfps)/1835*100:4.1f}%"
     )
 
 

@@ -5,7 +5,9 @@ Example run command below.
 ```bash
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama.py main \
-    --model_name meta-llama/Llama-3.1-70B
+    --model_name meta-llama/Llama-3.1-70B \
+    --seq_len $((8 * 1024)) \
+    --num_steps 32
 ```
     
 For power measurements, use one of the following commands.
@@ -74,12 +76,12 @@ def approx_llama_forward_macs(
 
 def measure(
         model,
-        full_name: str,
+        model_name: str,
         seq_len: int,
         batch_size: int,
         num_steps: int,
 ) -> dict:
-    config = AutoConfig.from_pretrained(full_name, torch_dtype=torch.bfloat16)
+    config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
 
     flops = approx_llama_forward_macs(
         num_decoder_blocks=config.num_hidden_layers,
@@ -122,7 +124,7 @@ def measure(
     tkps = [batch_size * seq_len * 1_000 / ms for ms in mss]
 
     info = {
-        "Model Name": full_name,
+        "Model Name": model_name,
         "Batch Size": batch_size,
         "Input Sequence Length": seq_len,
         "Average Latency (milliseconds)": mean(mss),
@@ -162,7 +164,7 @@ def main(model_name: str, seq_len: int = 4096, num_steps: int = 32):
 
     info = measure(
         model=model,
-        full_name=model_name,
+        model_name=model_name,
         batch_size=1,
         seq_len=seq_len,
         num_steps=num_steps,
