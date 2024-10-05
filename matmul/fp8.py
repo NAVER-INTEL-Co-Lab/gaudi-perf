@@ -95,10 +95,11 @@ def prof_matmul(
 
         print(
             f"({m:5} x {k:5})x({k:5} x {n:5}) {fp8_config} {scale_method}: "
-            f"Mean {mean(tflops):.2f} TFLOPS, "
-            f"Min {min(tflops):.2f} TFLOPS, "
-            f"Max {max(tflops):.2f} TFLOPS, "
-            f"STDEV {stdev(tflops):.2f} TFLOPS"
+            f"Mean {mean(tflops):6.1f} TFLOPS, "
+            f"Min {min(tflops):6.1f} TFLOPS, "
+            f"Max {max(tflops):6.1f} TFLOPS, "
+            f"STDEV {stdev(tflops):6.1f} TFLOPS, "
+            f"MFU: {mean(tflops)/865*100:4.1f}%"
         )
 
 
