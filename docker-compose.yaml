@@ -96,16 +96,16 @@ services:
       - sys_nice
     environment:
       OMPI_MCA_btl_vader_single_copy_mechanism: none
-      PT_HPU_ENABLE_LAZY_COLLECTIVES: true
       # Specify which HPU to use.
       HABANA_VISIBLE_DEVICES: ${HABANA_VISIBLE_DEVICES:-all}
       # Enable when using DeepSpeed.
      # PT_HPU_MAX_COMPOUND_OP_SIZE: 1024
      # PT_HPU_POOL_MEM_ACQUIRE_PERC: 100
+     # PT_HPU_ENABLE_LAZY_COLLECTIVES: true
     build:
       dockerfile: Dockerfile
       args:
         OS: ${OS:-ubuntu22.04}
-        PYTORCH_VERSION: ${PYTORCH_VERSION:-2.2.2}
-        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-1.16.2}
+        PYTORCH_VERSION: ${PYTORCH_VERSION:-2.3.1}
+        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-1.17.0}
         IMAGE_TAG: ${IMAGE_TAG:-latest}
