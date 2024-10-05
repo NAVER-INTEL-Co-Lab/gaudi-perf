@@ -6,8 +6,8 @@ export PT_HPU_WEIGHT_SHARING=0
 export LOG_LEVEL_HQT=1
 export PT_HPU_LAZY_MODE=1
 
-Run `python -m fire perf/matmul_bf16.py measure` to run for the provided shapes.
-Run `python -m fire perf/matmul_bf16.py prof_matmul $m $k $n` for arbitrary shapes.
+Run `python -m fire matmul/fp8.py measure` to run for the provided shapes.
+Run `python -m fire matmul/fp8.py prof_matmul $m $k $n` for arbitrary shapes.
 """
 from statistics import mean, stdev
 
