@@ -118,15 +118,15 @@ def measure(
         "Model Name": full_name,
         "Batch Size": batch_size,
         "Input Sequence Length": seq_len,
-        "Average Latency (milliseconds)": round(mean(mss)),
+        "Average Latency (milliseconds)": mean(mss),
         "Synapse AI Version": get_habana_frameworks_version(),
         "PyTorch Version": torch.__version__,
         "DeepSpeed Version": deepspeed.__version__,
-        "Mean Tokens per Second": round(mean(tkps), ndigits=1),
-        "Model Mean TFLOPS": round(mean(tfps), ndigits=1),
-        "Model Min TFLOPS": round(min(tfps), ndigits=1),
-        "Model Max TFLOPS": round(max(tfps), ndigits=1),
-        "Model STDEV TFLOPS": round(stdev(tfps), ndigits=1),
+        "Mean Tokens per Second": mean(tkps),
+        "Model Mean TFLOPS": mean(tfps),
+        "Model Min TFLOPS": min(tfps),
+        "Model Max TFLOPS": max(tfps),
+        "Model STDEV TFLOPS": stdev(tfps),
     }
     return info
 
@@ -168,3 +168,4 @@ def main(model_name: str, seq_len: int = 4096, num_steps: int = 32):
     dist.destroy_process_group()
     if local_rank == 0:  # Only show the results from the main process.
         pprint(info)
+        print(f"Mean TFLOPS/HPU: {info["Model Mean TFLOPS"] / world_size:.1f} TFLOPS")
