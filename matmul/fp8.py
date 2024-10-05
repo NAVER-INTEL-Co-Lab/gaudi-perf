@@ -115,6 +115,6 @@ def measure(num_steps: int = 64, fp8_config: str = "E4M3", scale_method: str = "
         (2 ** 15, 2 ** 15, 2 ** 15),
     )
     kwargs = dict(num_steps=num_steps, fp8_config=fp8_config, scale_method=scale_method)
-    for m, k, n in mkn:
-        prof_matmul(m, k, n, measure_mode=True, **kwargs)
-        prof_matmul(m, k, n, measure_mode=False, **kwargs)
+    for measure_mode in (True, False):
+        for m, k, n in mkn:
+            prof_matmul(m, k, n, measure_mode=measure_mode, **kwargs)
