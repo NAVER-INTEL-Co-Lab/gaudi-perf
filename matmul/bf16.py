@@ -14,7 +14,7 @@ def prof_matmul(
         m: int,
         k: int,
         n: int,
-        num_steps: int = 256,
+        num_steps: int = 64,
         data_type: str = "bf16",
 ) -> None:
     if data_type == "fp32":
@@ -63,7 +63,7 @@ def prof_matmul(
     )
 
 
-def measure(num_steps: int = 256, data_type: str = "bf16") -> None:
+def measure(num_steps: int = 64, data_type: str = "bf16") -> None:
     mkn = (
         (16384, 8192, 1280),
         (16384, 1024, 8192),

@@ -31,7 +31,7 @@ def prof_matmul(
         m: int,
         k: int,
         n: int,
-        num_steps: int = 256,
+        num_steps: int = 64,
         fp8_config: str = "E4M3",
         scale_method: str = "maxabs_hw",
         measure_mode: bool = True,
@@ -103,7 +103,7 @@ def prof_matmul(
         )
 
 
-def measure(num_steps: int = 256, fp8_config: str = "E4M3", scale_method: str = "maxabs_hw") -> None:
+def measure(num_steps: int = 64, fp8_config: str = "E4M3", scale_method: str = "maxabs_hw") -> None:
     mkn = (
         (16384, 8192, 1280),
         (16384, 1024, 8192),
