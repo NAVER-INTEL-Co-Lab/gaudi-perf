@@ -1,6 +1,6 @@
 """
-Run `python -m fire perf/matmul_bf16.py measure` to run for the provided shapes.
-Run `python -m fire perf/matmul_bf16.py prof_matmul $m $k $n` for arbitrary shapes.
+Run `python -m fire matmul/bf16.py measure` to run for the provided shapes.
+Run `python -m fire matmul/bf16.py prof_matmul $m $k $n` for arbitrary shapes.
 """
 from statistics import mean, stdev
 
@@ -54,11 +54,11 @@ def prof_matmul(
     # Using the exact TFLOPS equation.
     tfps = [1e-9 * m * n * (2 * k - 1) / ms for ms in mss]
     print(
-        f"({m:6}x{k:6})x({k:6}x{n:6}): 
-        Mean {mean(tfps):5.1f} TFLOPS, 
-        Min {min(tfps):5.1f} TFLOPS, 
-        Max {max(tfps):5.1f} TFLOPS, 
-        STDEV {stdev(tfps):7.3f} TFLOPS"
+        f"({m:6}x{k:6})x({k:6}x{n:6}): "
+        f"Mean {mean(tfps):5.1f} TFLOPS, "
+        f"Min {min(tfps):5.1f} TFLOPS, "
+        f"Max {max(tfps):5.1f} TFLOPS, "
+        f"STDEV {stdev(tfps):7.3f} TFLOPS"
     )
 
 

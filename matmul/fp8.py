@@ -94,11 +94,11 @@ def prof_matmul(
         tflops = [1e-9 * m * n * (2 * k - 1) / ms for ms in mss]
 
         print(
-            f"{fp8_config} {scale_method} scaling matmul ({m}x{k})x({k}x{n}): 
-            Mean {mean(tflops):.2f} TFLOPS, 
-            Min: {min(tflops):.2f} TFLOPS, 
-            Max: {max(tflops):.2f} TFLOPS, 
-            STDEV: {stdev(tflops):.2f} TFLOPS"
+            f"{fp8_config} {scale_method} scaling matmul ({m}x{k})x({k}x{n}): "
+            f"Mean {mean(tflops):.2f} TFLOPS, "
+            f"Min: {min(tflops):.2f} TFLOPS, "
+            f"Max: {max(tflops):.2f} TFLOPS, "
+            f"STDEV: {stdev(tflops):.2f} TFLOPS"
         )
 
 
