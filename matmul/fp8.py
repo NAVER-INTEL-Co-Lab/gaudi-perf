@@ -64,13 +64,9 @@ def prof_matmul(
     if measure_mode:
         model_measure = prepare(model, config_measure)
         htcore.hpu_inference_initialize(model_measure, mark_only_scales_as_const=True)
-        print("Starting measurement.")
-
         for _ in range(16):
             model_measure(a)
-
         finalize_calibration(model_measure)
-        print("Finishing measurement.")
     else:
         model_quant = convert(model, config_quantize)
         htcore.hpu_inference_initialize(model_quant, mark_only_scales_as_const=True)
