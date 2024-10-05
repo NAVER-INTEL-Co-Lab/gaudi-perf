@@ -5,7 +5,7 @@ dest='~/PyCharmProjects'
 
 for host in "$@"
 do
-  rsync -rP ../gaudi-perf-fp8 \
+  rsync -rP ../gaudi-perf \
       --exclude ".git" \
       --filter=":- .gitignore" \
       "${host}:${dest}" &
