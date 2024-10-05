@@ -9,6 +9,7 @@ export PT_HPU_LAZY_MODE=1
 Run `python -m fire matmul/fp8.py measure` to run for the provided shapes.
 Run `python -m fire matmul/fp8.py prof_matmul $m $k $n` for arbitrary shapes.
 """
+import logging
 from statistics import mean, stdev
 
 import torch
@@ -36,6 +37,7 @@ def prof_matmul(
         scale_method: str = "maxabs_hw",
         measure_mode: bool = True,
 ):
+    logging.disable(logging.WARNING)
     config_measure = FP8Config.from_dict({
         "fp8_config": fp8_config,
         "mode": "MEASURE",
