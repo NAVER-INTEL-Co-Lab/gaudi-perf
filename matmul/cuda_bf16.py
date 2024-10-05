@@ -7,7 +7,7 @@ import torch
 
 
 @torch.inference_mode()
-def measure(num_steps: int = 256):
+def measure(num_steps: int = 64):
     torch._dynamo.reset()  # Clear compilation cache.
     torch._dynamo.config.cache_size_limit = 64
     mkns = (

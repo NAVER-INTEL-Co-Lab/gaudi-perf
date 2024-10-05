@@ -2,7 +2,7 @@
 The following measurements were made using vLLM version 0.6.2.
 This code may not function correctly for other versions of vLLM.
 
-Run using the command below.
+Run using the command below after logging into HuggingFace with `huggingface-cli login`.
 The `transformers` version must be compatible with Llama v3.1 for this example.
 
 ```bash
@@ -18,6 +18,9 @@ For power measurements, use one of the following commands.
 sudo ipmitool dcmi power reading 5_sec
 sudo ipmitool sensor get Total_Power
 ```
+
+Note that the true throughput is better than the measurement because
+we are unable to remove the overhead from the `generate` method.
 """
 import torch
 from transformers import AutoConfig
@@ -64,7 +67,7 @@ def approx_llama_forward_macs(
     return macs  # MAC count.
 
 
-def main(model_name, seq_len, num_steps, tensor_parallel_size: int = 8):
+def main(model_name: str, seq_len, num_steps, tensor_parallel_size: int = 8):
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
     hs = config.hidden_size
     vs = config.vocab_size
@@ -88,8 +91,8 @@ def main(model_name, seq_len, num_steps, tensor_parallel_size: int = 8):
         model_name, 
         tensor_parallel_size=tensor_parallel_size, 
         dtype=torch.bfloat16, 
-        enable_chunked_prefill=False,
-        max_seq_len_to_capture=seq_len,
+        enable_chunked_prefill=False,  # Enabled by default when the input is 32K+.
+        max_seq_len_to_capture=seq_len,  # Use CUDA graphs.
     )
     sampling_params = SamplingParams(max_tokens=1)
 
@@ -110,5 +113,4 @@ def main(model_name, seq_len, num_steps, tensor_parallel_size: int = 8):
     ms = tic.elapsed_time(toc)
 
     tfps = flops * num_steps * 1e-9 / tensor_parallel_size / ms
-    print(ms)
-    print(f"TFLOPS/GPU: {tfps:.1f}")
+    print(f"\n\nTFLOPS/GPU: {tfps:.1f}\n\n")
