@@ -2,11 +2,18 @@
 Login to HuggingFace with `huggingface-cli login` if a gated repo is to be used.
 
 Example run command below.
-
+```bash
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama.py main \
     --model_name meta-llama/Llama-3.1-70B
+```
+    
+For power measurements, use one of the following commands.
 
+```bash
+sudo ipmitool dcmi power reading 5_sec
+sudo ipmitool sensor get Total_Power
+```
 """
 import os
 from pprint import pprint
