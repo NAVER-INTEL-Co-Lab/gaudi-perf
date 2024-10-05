@@ -2,12 +2,23 @@
 Available scaling methods can be found in the following link.
 https://docs.habana.ai/en/latest/PyTorch/Inference_on_PyTorch/Inference_Using_FP8.html#supported-json-config-file-options
 
+Set these environment variables before starting.
+
+```bash
 export PT_HPU_WEIGHT_SHARING=0
 export LOG_LEVEL_HQT=1
 export PT_HPU_LAZY_MODE=1
+```
 
-Run `python -m fire matmul/fp8.py measure` to run for the provided shapes.
-Run `python -m fire matmul/fp8.py prof_matmul $m $k $n` for arbitrary shapes.
+To run for the provided shapes, run the following command.
+python -m fire matmul/fp8.py measure
+
+For arbitrary shapes, run the following commands in order.
+
+```bash
+python -m fire matmul/fp8.py prof_matmul $m $k $n --measure_mode True
+python -m fire matmul/fp8.py prof_matmul $m $k $n --measure_mode False
+```
 """
 import logging
 from statistics import mean, stdev
