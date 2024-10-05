@@ -11,7 +11,7 @@ export PT_HPU_LAZY_MODE=1
 ```
 
 To run for the provided shapes, run the following command.
-python -m fire matmul/fp8.py measure
+`python -m fire matmul/fp8.py measure`
 
 For arbitrary shapes, run the following commands in order.
 
@@ -97,15 +97,16 @@ def prof_matmul(
 
         mss = [tic.elapsed_time(toc) for tic, toc in zip(tics, tocs, strict=True)]
         # Using the exact matmul flops equation.
-        tflops = [1e-9 * m * n * (2 * k - 1) / ms for ms in mss]
+        tfps = [1e-9 * m * n * (2 * k - 1) / ms for ms in mss]
 
         print(
             f"({m:5} x {k:5})x({k:5} x {n:5}) {fp8_config} {scale_method}: "
-            f"Mean {mean(tflops):6.1f} TFLOPS, "
-            f"Min {min(tflops):6.1f} TFLOPS, "
-            f"Max {max(tflops):6.1f} TFLOPS, "
-            f"STDEV {stdev(tflops):6.1f} TFLOPS, "
-            f"MFU: {mean(tflops)/865*100:4.1f}%"
+            f"Mean {mean(tfps):6.1f} TFLOPS, "
+            f"Min {min(tfps):6.1f} TFLOPS, "
+            f"Max {max(tfps):6.1f} TFLOPS, "
+            f"STDEV {stdev(tfps):6.1f} TFLOPS, "
+            f"Gaudi v2 MFU: {mean(tfps)/865*100:4.1f}%, "
+            f"Gaudi v3 MFU: {mean(tfps)/1835*100:4.1f}%"
         )
 
 

@@ -5,7 +5,9 @@ Example run command below.
 ```bash
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama.py main \
-    --model_name meta-llama/Llama-3.1-70B
+    --model_name meta-llama/Llama-3.1-70B \
+    --seq_len $((8 * 1024)) \
+    --num_steps 32
 ```
     
 For power measurements, use one of the following commands.
