@@ -10,7 +10,8 @@ deepspeed --no_local_rank --num_gpus 8 \
     --num_steps 32
 ```
     
-For power measurements, use one of the following commands.
+For power measurements, use one of the following commands on the host.
+The container will likely not have `ipmitool` available.
 
 ```bash
 sudo ipmitool dcmi power reading 5_sec
@@ -83,7 +84,7 @@ def measure(
 ) -> dict:
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
 
-    flops = approx_llama_forward_macs(
+    macs = approx_llama_forward_macs(
         num_decoder_blocks=config.num_hidden_layers,
         sequence_length=seq_len,
         vocabulary_size=config.vocab_size,
@@ -94,7 +95,7 @@ def measure(
         gated_ffn_act=True,
     )
 
-    flops *= 2 * batch_size  # 1 MAC is approximately 2 FLOPs.
+    flops = macs * 2 * batch_size  # 1 MAC is approximately 2 FLOPs.
     device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
     x = torch.zeros(size=(batch_size, seq_len), dtype=torch.int64, device=device)
 
@@ -136,6 +137,7 @@ def measure(
         "Model Min TFLOPS": min(tfps),
         "Model Max TFLOPS": max(tfps),
         "Model STDEV TFLOPS": stdev(tfps),
+        "Forward MAC Count": macs,
     }
     return info
 

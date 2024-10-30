@@ -106,6 +106,6 @@ services:
       dockerfile: Dockerfile
       args:
         OS: ${OS:-ubuntu22.04}
-        PYTORCH_VERSION: ${PYTORCH_VERSION:-2.3.1}
-        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-1.17.0}
+        PYTORCH_VERSION: ${PYTORCH_VERSION:-2.4.0}
+        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-1.18.0}
         IMAGE_TAG: ${IMAGE_TAG:-latest}
