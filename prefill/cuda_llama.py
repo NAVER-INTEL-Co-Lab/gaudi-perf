@@ -12,7 +12,8 @@ python -m fire prefill/cuda_llama.py main \
     --num_steps 32
 ```
 
-For power measurements, use one of the following commands.
+For power measurements, use one of the following commands on the host.
+The container will likely not have `ipmitool` available.
 
 ```bash
 sudo ipmitool dcmi power reading 5_sec

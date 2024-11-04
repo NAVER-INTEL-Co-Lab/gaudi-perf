@@ -1,4 +1,6 @@
 """
+Note that accumulation always occurs in FP32 in the Gaudi, unlike NVIDIA GPUs.
+
 Run `python -m fire matmul/bf16.py measure` to run for the provided shapes.
 Run `python -m fire matmul/bf16.py prof_matmul $m $k $n` for user provided shapes.
 """
