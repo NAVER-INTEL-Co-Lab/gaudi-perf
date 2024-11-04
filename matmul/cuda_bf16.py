@@ -7,9 +7,13 @@ import torch
 
 
 @torch.inference_mode()
-def measure(num_steps: int = 64):
+def measure(num_steps: int = 64, reduced_precision_reduction: bool = True):
     torch._dynamo.reset()  # Clear compilation cache.
     torch._dynamo.config.cache_size_limit = 64
+    # Reduced precision reduction for BF16 GEMM is enabled by default in PyTorch.
+    # https://pytorch.org/docs/stable/notes/numerical_accuracy.html#reduced-precision-reduction-for-fp16-and-bf16-gemms
+    torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = reduced_precision_reduction
+
     mkns = (
         (16384, 8192, 1280),
         (16384, 1024, 8192),
