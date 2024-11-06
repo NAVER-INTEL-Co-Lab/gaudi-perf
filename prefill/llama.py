@@ -82,7 +82,7 @@ def measure(
         batch_size: int,
         num_steps: int,
 ) -> dict:
-    config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
+    config = AutoConfig.from_pretrained(model_name)
 
     macs = approx_llama_forward_macs(
         num_decoder_blocks=config.num_hidden_layers,
@@ -143,7 +143,12 @@ def measure(
 
 
 @torch.inference_mode()
-def main(model_name: str, seq_len: int = 4096, num_steps: int = 32):
+def main(
+        model_name: str,
+        num_steps: int = 16,
+        batch_size: int = 1,
+        seq_len: int = 4096,
+):
     deepspeed.init_distributed(dist_backend="hccl")
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
     world_size = int(os.getenv("WORLD_SIZE", "1"))
@@ -167,7 +172,7 @@ def main(model_name: str, seq_len: int = 4096, num_steps: int = 32):
     info = measure(
         model=model,
         model_name=model_name,
-        batch_size=1,
+        batch_size=batch_size,
         seq_len=seq_len,
         num_steps=num_steps,
     )
