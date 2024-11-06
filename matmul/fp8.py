@@ -46,26 +46,30 @@ def prof_matmul(
         num_steps: int = 64,
         fp8_config: str = "E4M3",
         scale_method: str = "maxabs_hw",
+        scale_format: str = "const",
         measure_mode: bool = True,
 ):
     logging.disable(logging.WARNING)  # No logging for the demo.
+
+    dump_stats_path = f"./inc_output/{fp8_config}_{m}_{k}_{n}"
     config_measure = FP8Config.from_dict({
         "fp8_config": fp8_config,
         "mode": "MEASURE",
         "observer": "maxabs",
         "allowlist": {"types": [], "names":  []},
         "blocklist": {"types": [], "names":  []},
-        "dump_stats_path": f"./inc_output/{fp8_config}_{scale_method}_{m}_{k}_{n}",
+        "dump_stats_path": dump_stats_path,
     })
-
+    assert scale_format in ("const", "scalar")
     config_quantize = FP8Config.from_dict({
         "fp8_config": fp8_config,
         "mode": "QUANTIZE",
         "observer": "maxabs",
         "scale_method": scale_method,
+        "scale_format": scale_format,
         "allowlist": {"types": [], "names":  []},
         "blocklist": {"types": [], "names":  []},
-        "dump_stats_path": f"./inc_output/{fp8_config}_{scale_method}_{m}_{k}_{n}"
+        "dump_stats_path": dump_stats_path,
     })
 
     a = torch.randn(size=(m, k), device="hpu")
@@ -75,8 +79,7 @@ def prof_matmul(
     if measure_mode:
         model_measure = prepare(model, config_measure)
         htcore.hpu_inference_initialize(model_measure, mark_only_scales_as_const=True)
-        for _ in range(16):
-            model_measure(a)
+        model_measure(a)
         finalize_calibration(model_measure)
     else:
         model_quant = convert(model, config_quantize)
@@ -100,7 +103,7 @@ def prof_matmul(
         tfps = [1e-9 * m * n * (2 * k - 1) / ms for ms in mss]
 
         print(
-            f"({m:5} x {k:5})x({k:5} x {n:5}) {fp8_config} {scale_method}: "
+            f"({m:5}x{k:5})x({k:5}x{n:5}) {fp8_config} {scale_method} {scale_format}: "
             f"Mean {mean(tfps):6.1f} TFLOPS, "
             f"Min {min(tfps):6.1f} TFLOPS, "
             f"Max {max(tfps):6.1f} TFLOPS, "
@@ -110,7 +113,14 @@ def prof_matmul(
         )
 
 
-def measure(num_steps: int = 64, fp8_config: str = "E4M3", scale_method: str = "maxabs_hw") -> None:
+def measure(
+        num_steps: int = 64,
+        fp8_config: str = "E4M3",
+        scale_method: str = "maxabs_hw",
+        scale_format: str = "scalar",
+) -> None:
+    # Scale format of `scalar` is supposedly faster.
+    # https://docs.habana.ai/en/v1.18.0/PyTorch/Inference_on_PyTorch/Inference_Using_FP8.html#compile-time-and-throughput-optimization
     mkn = (
         (16384, 8192, 1280),
         (16384, 1024, 8192),
@@ -121,7 +131,12 @@ def measure(num_steps: int = 64, fp8_config: str = "E4M3", scale_method: str = "
         (2 ** 14, 2 ** 14, 2 ** 14),
         (2 ** 15, 2 ** 15, 2 ** 15),
     )
-    kwargs = dict(num_steps=num_steps, fp8_config=fp8_config, scale_method=scale_method)
+    kwargs = dict(
+        num_steps=num_steps,
+        fp8_config=fp8_config,
+        scale_method=scale_method,
+        scale_format=scale_format,
+    )
     for measure_mode in (True, False):
         for m, k, n in mkn:
             prof_matmul(m, k, n, measure_mode=measure_mode, **kwargs)
