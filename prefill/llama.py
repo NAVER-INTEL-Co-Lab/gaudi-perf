@@ -27,6 +27,7 @@ import torch.distributed as dist
 import deepspeed
 import habana_frameworks.torch.hpu as ht
 import habana_frameworks.torch.distributed.hccl  # noqa
+import habana_frameworks.torch.hpu.random as htrandom
 from optimum.habana.transformers.modeling_utils import adapt_transformers_to_gaudi
 from optimum.habana.utils import get_habana_frameworks_version
 from habana_frameworks.torch.hpu import Event
@@ -97,6 +98,7 @@ def measure(
 
     flops = macs * 2 * batch_size  # 1 MAC is approximately 2 FLOPs.
     device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
+    htrandom.manual_seed_all(9872)  # TP inputs must be the same across devices.
     x = torch.randint(
         low=0,
         high=config.vocab_size,

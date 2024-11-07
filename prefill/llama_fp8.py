@@ -42,6 +42,7 @@ import torch.distributed as dist
 import habana_frameworks.torch.core as htcore
 import habana_frameworks.torch.hpu as ht
 import habana_frameworks.torch.distributed.hccl  # noqa
+import habana_frameworks.torch.hpu.random as htrandom
 from optimum.habana.transformers.modeling_utils import adapt_transformers_to_gaudi
 from optimum.habana.utils import get_habana_frameworks_version
 
@@ -115,7 +116,14 @@ def measure(
 
     flops = macs * 2 * batch_size  # 1 MAC is approximately 2 FLOPs.
     device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
-    x = torch.zeros(size=(batch_size, seq_len), dtype=torch.int64, device=device)
+    htrandom.manual_seed_all(9872)  # TP inputs must be the same across devices.
+    x = torch.randint(
+        low=0,
+        high=config.vocab_size,
+        size=(batch_size, seq_len),
+        dtype=torch.int64,
+        device=device,
+    )
 
     forward_kwargs = dict(
         use_flash_attention=True,
@@ -226,6 +234,7 @@ def main(
     if measure_mode:
         model_measure = prepare(model.module, config_measure)
         htcore.hpu_inference_initialize(model_measure, mark_only_scales_as_const=True)
+        htrandom.manual_seed_all(9872)  # TP inputs must be the same across devices.
 
         for _ in range(8):
             x = torch.randint(
