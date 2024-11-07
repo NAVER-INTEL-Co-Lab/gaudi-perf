@@ -97,7 +97,13 @@ def measure(
 
     flops = macs * 2 * batch_size  # 1 MAC is approximately 2 FLOPs.
     device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
-    x = torch.zeros(size=(batch_size, seq_len), dtype=torch.int64, device=device)
+    x = torch.randint(
+        low=0,
+        high=config.vocab_size,
+        size=(batch_size, seq_len),
+        dtype=torch.int64,
+        device=device,
+    )
 
     forward_kwargs = dict(
         use_flash_attention=True,
