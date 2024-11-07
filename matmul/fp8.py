@@ -121,7 +121,7 @@ def measure(
         num_steps: int = 64,
         fp8_config: str = "E4M3",
         scale_method: str = "maxabs_hw",
-        scale_format: str = "scalar",
+        scale_format: str = "const",
         measure_mode: bool = True,
 ) -> None:
     # Scale format of `scalar` is supposedly faster.
