@@ -185,9 +185,6 @@ def main(
     # Hack to prevent OOM on 16K sequence length for 34B.
     use_hpu_graph = (world_size == 1) and (seq_len < 16384)
 
-    # Checkpoints must be loaded by deepspeed during inference initialization
-    # to prevent entire model weights from being loaded by all processes.
-    # This way, model initialization does not cause a memory spike.
     model = deepspeed.init_inference(
         model,
         dtype=torch.bfloat16,
