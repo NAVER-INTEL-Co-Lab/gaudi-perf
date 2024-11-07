@@ -176,8 +176,8 @@ def main(
     world_size = int(os.getenv("WORLD_SIZE", "1"))
 
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
-
-    dsd = f"hpu" if world_size == 1 else "meta"
+    device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
+    dsd = device if world_size == 1 else "meta"
     with deepspeed.OnDevice(dtype=torch.bfloat16, device=dsd):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
         model.eval()
@@ -230,10 +230,10 @@ def main(
         for _ in range(8):
             x = torch.randint(
                 low=0,
-                high=1024,
+                high=config.vocab_size,
                 size=(batch_size, seq_len),
                 dtype=torch.int64,
-                device="hpu",
+                device=device,
             )
             model_measure(x)
         finalize_calibration(model_measure)

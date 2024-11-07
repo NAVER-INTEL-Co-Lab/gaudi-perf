@@ -101,13 +101,13 @@ def main(model_name: str, seq_len, num_steps, tensor_parallel_size: int = 8):
     toc = torch.cuda.Event(enable_timing=True)
 
     for _ in range(16):  # Warmup
-        x = torch.randint(low=0, high=4096, size=(seq_len,), dtype=torch.int64).tolist()
+        x = torch.randint(low=0, high=config.vocab_size, size=(seq_len,), dtype=torch.int64).tolist()
         model.generate(TokensPrompt(prompt_token_ids=x), sampling_params=sampling_params, use_tqdm=False)
 
     tic.wait()
     tic.record()
     for _ in range(num_steps):
-        x = torch.randint(low=0, high=4096, size=(seq_len,), dtype=torch.int64).tolist()
+        x = torch.randint(low=0, high=config.vocab_size, size=(seq_len,), dtype=torch.int64).tolist()
         model.generate(TokensPrompt(prompt_token_ids=x), sampling_params=sampling_params, use_tqdm=False)
     toc.record()
     torch.cuda.synchronize()
