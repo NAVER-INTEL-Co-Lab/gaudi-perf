@@ -11,7 +11,11 @@ export PT_HPU_LAZY_MODE=1
 ```
 
 To run for the provided shapes, run the following command.
-`python -m fire matmul/fp8.py measure`
+Delete the `inc_output` directory if a previous run exists.
+```
+python -m fire matmul/fp8.py measure --measure_mode True
+python -m fire matmul/fp8.py measure --measure_mode False
+```
 
 For arbitrary shapes, run the following commands in order.
 
@@ -118,6 +122,7 @@ def measure(
         fp8_config: str = "E4M3",
         scale_method: str = "maxabs_hw",
         scale_format: str = "scalar",
+        measure_mode: bool = True,
 ) -> None:
     # Scale format of `scalar` is supposedly faster.
     # https://docs.habana.ai/en/v1.18.0/PyTorch/Inference_on_PyTorch/Inference_Using_FP8.html#compile-time-and-throughput-optimization
@@ -137,6 +142,5 @@ def measure(
         scale_method=scale_method,
         scale_format=scale_format,
     )
-    for measure_mode in (True, False):
-        for m, k, n in mkn:
-            prof_matmul(m, k, n, measure_mode=measure_mode, **kwargs)
+    for m, k, n in mkn:
+        prof_matmul(m, k, n, measure_mode=measure_mode, **kwargs)
