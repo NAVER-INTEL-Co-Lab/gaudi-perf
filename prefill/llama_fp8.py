@@ -9,16 +9,16 @@ export LOG_LEVEL_HQT=1
 export PT_HPU_LAZY_MODE=1
 
 # First run with `measure_mode` enabled to get quantization statistics.
-deepspeed --no_local_rank --num_gpus 8\
-    --module fire prefill/llama_fp8.py main\
+deepspeed --no_local_rank --num_gpus 8 \
+    --module fire prefill/llama_fp8.py main \
     --model_name meta-llama/Llama-3.1-70B \
     --seq_len $((8 * 1024)) \
     --num_steps 32 \
     --measure_mode True
 
 # Then run with `measure_mode` disabled for the actual run.
-deepspeed --no_local_rank --num_gpus 8\
-    --module fire prefill/llama_fp8.py main\
+deepspeed --no_local_rank --num_gpus 8 \
+    --module fire prefill/llama_fp8.py main \
     --model_name meta-llama/Llama-3.1-70B \
     --seq_len $((8 * 1024)) \
     --num_steps 32 \
