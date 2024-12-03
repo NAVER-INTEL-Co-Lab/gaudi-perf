@@ -7,6 +7,7 @@ Example run command below.
 export PT_HPU_WEIGHT_SHARING=0
 export LOG_LEVEL_HQT=1
 export PT_HPU_LAZY_MODE=1
+export PT_HPU_ENABLE_LAZY_COLLECTIVES=true
 
 # First run with `measure_mode` enabled to get quantization statistics.
 deepspeed --no_local_rank --num_gpus 8 \
@@ -178,20 +179,23 @@ def main(
         scale_method: str = "maxabs_hw",
         scale_format: str = "const",
         measure_mode: bool = True,
+        use_hpu_graph: bool = True,
 ):
     deepspeed.init_distributed(dist_backend="hccl")
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
     world_size = int(os.getenv("WORLD_SIZE", "1"))
 
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
+    config.use_cache = False  # Prevent errors from HF.
+    # Options only available in Optimum Habana.
+    config.fused_qkv = True
+    config.flash_attention_fp8 = False  # Risky to use in practice.
+
     device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
     dsd = device if world_size == 1 else "meta"
     with deepspeed.OnDevice(dtype=torch.bfloat16, device=dsd):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
         model.eval()
-
-    # Hack to prevent OOM on 16K sequence length for 34B.
-    use_hpu_graph = (world_size == 1) and (seq_len < 16384)
 
     model = deepspeed.init_inference(
         model,
