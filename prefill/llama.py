@@ -164,10 +164,6 @@ def main(
     world_size = int(os.getenv("WORLD_SIZE", "1"))
 
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
-    config.use_cache = False  # Prevent errors from HF.
-    # Options only available in Optimum Habana.
-    config.fused_qkv = True
-    config.flash_attention_fp8 = False  # Risky to use in practice.
 
     dsd = "hpu" if world_size == 1 else "meta"
     with deepspeed.OnDevice(dtype=torch.bfloat16, device=dsd):
