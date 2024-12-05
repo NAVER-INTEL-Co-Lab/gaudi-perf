@@ -10,20 +10,24 @@ export PT_HPU_LAZY_MODE=1
 export PT_HPU_ENABLE_LAZY_COLLECTIVES=true
 
 # First run with `measure_mode` enabled to get quantization statistics.
+# Disable HPU graphs during measurement to save memory.
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama_fp8.py main \
     --model_name meta-llama/Llama-3.1-70B \
-    --seq_len $((8 * 1024)) \
+    --seq_len $((4 * 1024)) \
     --num_steps 32 \
-    --measure_mode True
+    --measure_mode True \
+    --use_hpu_graph False
 
 # Then run with `measure_mode` disabled for the actual run.
+# Enable HPU graphs if possible for better throughput.
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama_fp8.py main \
     --model_name meta-llama/Llama-3.1-70B \
-    --seq_len $((8 * 1024)) \
+    --seq_len $((4 * 1024)) \
     --num_steps 32 \
-    --measure_mode False
+    --measure_mode False \
+    --use_hpu_graph True
 ```
 
 For power measurements, use one of the following commands on the host.
