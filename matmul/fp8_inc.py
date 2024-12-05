@@ -13,15 +13,15 @@ export PT_HPU_LAZY_MODE=1
 To run for the provided shapes, run the following command.
 Delete the `inc_output` directory if a previous run exists.
 ```
-python -m fire matmul/fp8.py measure --measure_mode True
-python -m fire matmul/fp8.py measure --measure_mode False
+python -m fire matmul/fp8_inc.py measure --measure_mode True
+python -m fire matmul/fp8_inc.py measure --measure_mode False
 ```
 
 For arbitrary shapes, run the following commands in order.
 
 ```bash
-python -m fire matmul/fp8.py prof_matmul $m $k $n --measure_mode True
-python -m fire matmul/fp8.py prof_matmul $m $k $n --measure_mode False
+python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --measure_mode True
+python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --measure_mode False
 ```
 """
 import logging
