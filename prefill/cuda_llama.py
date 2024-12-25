@@ -30,16 +30,16 @@ from vllm.inputs import TokensPrompt
 
 
 def approx_llama_forward_macs(
-    num_decoder_blocks: int,
-    sequence_length: int,
-    vocabulary_size: int,
-    hidden_size: int,
-    intermediate_size: int,
-    num_attention_heads: int,
-    num_key_value_heads: int,
-    exclude_causal_mask: bool = False,
-    gated_ffn_act: bool = True,
-    head_dim: int | None = None,
+        num_decoder_blocks: int,
+        sequence_length: int,
+        vocabulary_size: int,
+        hidden_size: int,
+        intermediate_size: int,
+        num_attention_heads: int,
+        num_key_value_heads: int,
+        exclude_causal_mask: bool = False,
+        gated_ffn_act: bool = True,
+        head_dim: int | None = None,
 ) -> int:
     assert hidden_size % num_attention_heads == 0
     assert num_attention_heads % num_key_value_heads == 0

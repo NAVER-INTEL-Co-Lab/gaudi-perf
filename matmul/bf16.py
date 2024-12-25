@@ -16,7 +16,8 @@ def prof_matmul(
         m: int,
         k: int,
         n: int,
-        num_steps: int = 64,
+        warmup_steps: int = 32,
+        num_steps: int = 256,
         data_type: str = "bf16",
 ) -> None:
     if data_type == "fp32":
@@ -39,7 +40,7 @@ def prof_matmul(
             return torch.mm(input=self.m1, mat2=self.m2)
 
     mm = ht.wrap_in_hpu_graph(MM(mat1=a, mat2=w.T))
-    for _ in range(16):  # Warmup
+    for _ in range(warmup_steps):  # Warmup
         mm()
 
     tics = [ht.Event(enable_timing=True) for _ in range(num_steps)]
@@ -66,7 +67,7 @@ def prof_matmul(
     )
 
 
-def measure(num_steps: int = 64, data_type: str = "bf16") -> None:
+def measure(num_steps: int = 256, data_type: str = "bf16") -> None:
     mkn = (
         (16384, 8192, 1280),
         (16384, 1024, 8192),

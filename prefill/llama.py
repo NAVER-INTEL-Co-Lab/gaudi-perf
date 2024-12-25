@@ -3,6 +3,7 @@ Login to HuggingFace with `huggingface-cli login` if a gated repo is to be used.
 
 Example run command below.
 ```bash
+export PT_HPU_ENABLE_LAZY_COLLECTIVES=true
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama.py main \
     --model_name meta-llama/Llama-3.1-70B \
@@ -156,6 +157,7 @@ def main(
         num_steps: int = 16,
         batch_size: int = 1,
         seq_len: int = 4096,
+        use_hpu_graph: bool = True,
 ):
     deepspeed.init_distributed(dist_backend="hccl")
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
@@ -168,12 +170,11 @@ def main(
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
         model.eval()
 
-    hpu_graph = world_size == 1
     model = deepspeed.init_inference(
         model,
         dtype=torch.bfloat16,
         tensor_parallel={"tp_size": world_size},
-        enable_cuda_graph=hpu_graph,
+        enable_cuda_graph=use_hpu_graph,
         set_empty_params=True,  # Initialize empty parameters from meta-tensors.
     )
 
@@ -187,7 +188,7 @@ def main(
     info.update({
         "Local Rank": local_rank, 
         "World Size (TP Degree)": world_size, 
-        "Use HPU Graph": hpu_graph
+        "Use HPU Graph": use_hpu_graph
     })
     dist.destroy_process_group()
     if local_rank == 0:  # Only show the results from the main process.

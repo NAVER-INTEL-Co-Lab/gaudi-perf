@@ -1,3 +1,17 @@
+## Notes
+
+I do not agree with the argument made in 
+https://semianalysis.com/2024/12/22/mi300x-vs-h100-vs-h200-benchmark-part-1-training/#popular-gemm-benchmark-isnt-accurate
+that the cache should be flushed prior to each iteration.
+For actual models, the input tensor will be
+the output of the previous layer, and it is reasonable to expect it
+to be on the cache already. As for weight tensors, they can be
+prefetched since their values are known before the computation occurs.
+
+Because of this, the throughput measurements for both NVIDIA GPUs and Gaudi HPUs
+are made without flushing the cache.
+
+
 ## Results for FP8 matrix multiplication.
 
 |   M   |   K   |   N   | Scaling Granularity |  Device  | Peak TFLOPS | TFLOPS | MFU (%) |

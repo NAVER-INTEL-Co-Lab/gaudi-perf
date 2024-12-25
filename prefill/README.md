@@ -1,3 +1,11 @@
+## Notes
+The equation used to compute FLOPS in this code is more exact than the one in 
+https://semianalysis.com/2024/12/22/mi300x-vs-h100-vs-h200-benchmark-part-1-training/#training-testing-methodology-gpt1-5b-llama-8b-llama-70b-mistral
+because we calculate the actual MACs from the matrix multiplies involved in a
+Llama forward pass. The MAC counts from the `approx_llama_forward_macs` function
+have been verified to (almost) match the results provided by the
+`torch.utils.flop_counter.FlopCounterMode` function.
+
 ## Results for Llama v3.1 70B (BF16)
 
 | Model Name | Batch Size | Input Sequence Length |  Latency (ms)  | TP Degree | Synapse AI Version | Mean TFLOPS | Peak TFLOPS | MFU | Mean TFLOPS/HPU |
