@@ -15,10 +15,12 @@ import torch
 
 @torch.inference_mode()
 def measure(
-        num_steps: int = 64,
+        warmup_steps: int = 32,
+        num_steps: int = 256,
         fp8_config: str = "E4M3",  # Only E4M3 works for now.
         per_channel: bool = False, 
-        use_fast_accum: bool = True, 
+        use_fast_accum: bool = True,
+
 ) -> None:
     torch._dynamo.reset()  # Clear compilation cache.
     torch._dynamo.config.cache_size_limit = 64
@@ -46,7 +48,7 @@ def measure(
         else:
             s1 = s2 = torch.ones(1, device=device)
 
-        for _ in range(16):  # Warmup
+        for _ in range(warmup_steps):  # Warmup
             smm(x, y.T, s1, s2, out_dtype=torch.bfloat16, use_fast_accum=use_fast_accum)
 
         tics = [torch.cuda.Event(enable_timing=True) for _ in range(num_steps)]

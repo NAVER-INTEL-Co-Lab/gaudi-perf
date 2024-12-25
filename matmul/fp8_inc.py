@@ -52,6 +52,7 @@ def prof_matmul(
         scale_method: str = "maxabs_hw",
         scale_format: str = "const",
         measure_mode: bool = True,
+        _warmup_steps: int = 32,
 ):
     logging.disable(logging.WARNING)  # No logging for the demo.
 

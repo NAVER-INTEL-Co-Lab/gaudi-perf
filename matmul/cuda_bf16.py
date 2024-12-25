@@ -7,7 +7,11 @@ import torch
 
 
 @torch.inference_mode()
-def measure(num_steps: int = 64, reduced_precision_reduction: bool = True):
+def measure(
+        warmup_steps: int = 32,
+        num_steps: int = 256,
+        reduced_precision_reduction: bool = True,
+):
     torch._dynamo.reset()  # Clear compilation cache.
     torch._dynamo.config.cache_size_limit = 64
     # Reduced precision reduction for BF16 GEMM is enabled by default in PyTorch.
@@ -30,7 +34,7 @@ def measure(num_steps: int = 64, reduced_precision_reduction: bool = True):
         x = torch.randn(m, k, dtype=torch.bfloat16, device="cuda")
         y = torch.randn(n, k, dtype=torch.bfloat16, device="cuda")
 
-        for _ in range(16):  # Warmup
+        for _ in range(warmup_steps):  # Warmup
             mm(x, y.T)
 
         tics = [torch.cuda.Event(enable_timing=True) for _ in range(num_steps)]
