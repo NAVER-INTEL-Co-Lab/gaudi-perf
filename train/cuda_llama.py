@@ -251,11 +251,12 @@ def train(
     )
     device = torch.device(f"cuda:{local_rank}")
 
-    model_dtype = torch.bfloat16 if full_bf16 else torch.float32
-    with deepspeed.OnDevice(dtype=model_dtype, device=device):
+    with torch.cuda.device(device=device):
         config.use_cache = False  # Prevent errors from HF.
         model = TELlamaForCausalLM(config=config)
-        model.train()
+    model.train()
+    if full_bf16:  # This is usually a terrible idea for training stability.
+        model = model.to(torch.bfloat16)
 
     # Activate naive gradient checkpointing for HuggingFace models.
     # The model has selective activation checkpointing enabled even if
