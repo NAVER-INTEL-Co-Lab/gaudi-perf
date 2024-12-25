@@ -207,13 +207,12 @@ def train(
             if iter_num > 1:  # First step is not logged because it is warmup.
                 if local_rank == 0:
                     print(
-                        "{}, ZeRO-{}, Sequence: {}, Checkpoint: {}, Batch: {}, Micro Batch: {}",
-                        model_name,
-                        zero_stage,
-                        seq_len,
-                        use_act_ckpt,
-                        batch_size,
-                        micro_batch_size,
+                        f"{model_name}, "
+                        f"ZeRO-{zero_stage}, "
+                        f"Sequence: {seq_len}, "
+                        f"Checkpoint: {use_act_ckpt}, "
+                        f"Batch: {batch_size}, "
+                        f"Micro Batch: {micro_batch_size}",
                     )
                     print(f"Throughput: {tfps:.2f} TFLOPS")
                     print(f"Latency: {ms:.2f} milliseconds")

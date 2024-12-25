@@ -2,7 +2,7 @@
 Profile FP8 scaled GEMM throughput at different configurations.
 
 Example command for (4096 x 16384) x (16384 x 8192) matmul:
-PT_HPU_WEIGHT_SHARING=0 python -m fire perf/fp8_gemm.py measure 4096 16384 8192
+PT_HPU_WEIGHT_SHARING=0 python -m fire matmul/fp8.py measure 4096 16384 8192
 """
 import warnings
 from statistics import mean, stdev, median
