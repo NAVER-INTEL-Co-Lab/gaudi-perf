@@ -2,10 +2,12 @@
 Login to HuggingFace with `huggingface-cli login` if a gated repo is to be used.
 
 Single node run:
-deepspeed --no_local_rank --num_gpus 8 --module fire h100/ds_train_te.py train \
+deepspeed --no_local_rank --num_gpus 8 \
+    --module fire train/cuda_llama.py train \
     --model_name meta-llama/Llama-3.1-8B \
-    --seq_len $((16 * 1024)) \
-    --zero_stage 3
+    --seq_len $((8 * 1024)) \
+    --zero_stage 3 \
+    --use_liger_kernel True
 """
 import os
 from contextlib import contextmanager
@@ -25,7 +27,6 @@ from transformers.models.llama.modeling_llama import (
 import transformer_engine as te
 from transformer_engine.pytorch.attention import RotaryPositionEmbedding
 import deepspeed
-from liger_kernel.transformers import apply_liger_kernel_to_llama
 
 
 @contextmanager
@@ -188,10 +189,11 @@ def train(
 ):
     deepspeed.init_distributed(dist_backend="nccl")
     if use_liger_kernel:
+        from liger_kernel.transformers import apply_liger_kernel_to_llama
         apply_liger_kernel_to_llama(
             rope=False,
             cross_entropy=False,
-            fused_linear_cross_entropy=True,  # For 8K only to be honest.
+            fused_linear_cross_entropy=True,  # For 8K only, frankly.
             rms_norm=False,
             swiglu=False,
             model=None,
@@ -294,12 +296,11 @@ def train(
             if iter_num > 1:  # First step is warmup.
                 if local_rank == 0:
                     logger.info(
-                        "{}, ZeRO-{}, Sequence: {}, Batch: {}, Micro Batch: {}",
-                        model_name,
-                        zero_stage,
-                        seq_len,
-                        batch_size,
-                        micro_batch_size,
+                        f"{model_name}, "
+                        f"ZeRO-{zero_stage}, "
+                        f"Sequence: {seq_len}, "
+                        f"Batch: {batch_size}, "
+                        f"Micro Batch: {micro_batch_size}",
                     )
                     logger.info("Throughput: {tfps:.2f} TFLOPS", tfps=tfps)
                     logger.info("Latency: {ms:.2f} milliseconds", ms=ms)
