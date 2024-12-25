@@ -1,9 +1,6 @@
 """
 Profile FP8 scaled GEMM throughput at different configurations.
 
-Note that this code does not implement correct FP8 GEMM with scaling.
-It only implements approximately correct throughput measurements.
-
 Example command for (4096 x 16384) x (16384 x 8192) matmul:
 PT_HPU_WEIGHT_SHARING=0 python -m fire perf/fp8_gemm.py measure 4096 16384 8192
 """
@@ -88,8 +85,8 @@ def measure(
         use_sr1: bool = False,
         use_sr2: bool = False,
         hpu_graph: bool = False,
-        _num_steps: int = 256,
-        _warmup_steps: int = 16,
+        num_steps: int = 256,
+        warmup_steps: int = 32,
 ):
     ht.core.hpu_set_inference_env()
     configs = {k: v for k, v in locals().items() if not k.startswith("_")}
@@ -101,8 +98,7 @@ def measure(
     x1 = torch.rand(size=(m, k), device=device, dtype=torch.bfloat16)
     x2 = torch.rand(size=(n, k), device=device, dtype=torch.bfloat16)
 
-    # 1.0 is hardware accelerated, 1.5 is not.
-    s1 = 1.0 if hw_scale1 else 1.5
+    s1 = 1.0 if hw_scale1 else 1.5  # 1.0 is hardware accelerated, 1.5 is not.
     s1 = [s1 for _ in range(m)] if rowwise1 else s1
     s1 = torch.tensor(s1).to(device)
     if not do_cast1:
@@ -117,7 +113,7 @@ def measure(
     else:
         x1_fp8 = None
 
-    s2 = 1.0 if hw_scale2 else 1.5
+    s2 = 1.0 if hw_scale2 else 1.5  # 1.0 is hardware accelerated, 1.5 is not.
     s2 = [s2 for _ in range(n)] if rowwise2 else s2
     s2 = torch.tensor(s2).to(device)
     if not do_cast2:
@@ -135,7 +131,7 @@ def measure(
     si1 = 1 / s1[:, None] if rowwise1 else 1 / s1
     si2 = 1 / s2[None, :] if rowwise2 else 1 / s2
 
-    steps = _num_steps + _warmup_steps
+    steps = num_steps + warmup_steps
     tics = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
     tocs = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
     fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2).to(device)
@@ -143,8 +139,8 @@ def measure(
     if hpu_graph:  # HPU graphs make the run slower. I do not know why.
         fp8_gemm = ht.hpu.wrap_in_hpu_graph(fp8_gemm)
 
-    for i in range(_num_steps + _warmup_steps):
-        tics[i].wait()
+    for i in range(num_steps + warmup_steps):
+        tics[i].wait()  # Prevent asynchronous launches.
         tics[i].record()
         out = fp8_gemm(
             x1=x1,
@@ -163,16 +159,18 @@ def measure(
         ht.core.mark_step()
     ht.hpu.synchronize()
 
-    tics = tics[_warmup_steps:]
-    tocs = tocs[_warmup_steps:]
+    tics = tics[warmup_steps:]
+    tocs = tocs[warmup_steps:]
     mss = [tic.elapsed_time(toc) for tic, toc in zip(tics, tocs, strict=True)]
     # Using the exact equation for matrix multiplication FLOP counts.
-    tflops = [m * n * (2 * k - 1) / ms * 1e-9 for ms in mss]
+    tfps = [m * n * (2 * k - 1) / ms * 1e-9 for ms in mss]
     print(
         *[f"{k}: {v}," for k, v in configs.items()],
-        f"Mean: {mean(tflops):.1f} TFLOPS,",
-        f"Median: {median(tflops):.1f} TFLOPS,",
-        f"Min: {min(tflops):.1f} TFLOPS,",
-        f"Max: {max(tflops):.1f} TFLOPS,",
-        f"STDEV: {stdev(tflops):.2f} TFLOPS"
+        f"Mean: {mean(tfps):.1f} TFLOPS,",
+        f"Median: {median(tfps):.1f} TFLOPS,",
+        f"Min: {min(tfps):.1f} TFLOPS,",
+        f"Max: {max(tfps):.1f} TFLOPS,",
+        f"STDEV: {stdev(tfps):.2f} TFLOPS",
+        f"Gaudi v2 MFU: {mean(tfps) / 865 * 100:4.1f}%, "
+        f"Gaudi v3 MFU: {mean(tfps) / 1835 * 100:4.1f}%"
     )
