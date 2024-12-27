@@ -203,6 +203,8 @@ def train(
             toc.synchronize()
             # Average time per step in milliseconds.
             ms = tic.elapsed_time(toc)
+            # 1 MAC is approx. 2 FLOPs and backward is double forward compute.
+            # This leaves out checkpointing FLOPs as per the definition of MFU.
             tfps = 6 * macs * batch_size // world_size / ms * 1e-9
             if iter_num > 1:  # First step is not logged because it is warmup.
                 if local_rank == 0:

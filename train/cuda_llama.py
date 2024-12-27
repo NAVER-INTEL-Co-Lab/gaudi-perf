@@ -16,7 +16,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F  # noqa
 from torch.cuda import Event
-from loguru import logger
 import transformers
 from transformers import AutoConfig
 from transformers.models.llama.modeling_llama import (
@@ -279,7 +278,7 @@ def train(
     toc = Event(enable_timing=True)
 
     if local_rank == 0:
-        logger.info("Starting training. The first few iterations may be slow due to warmup.")
+        print("Starting training. The first few iterations may be slow due to warmup.")
 
     tic.record()
     while iter_num < max_iters:
@@ -292,17 +291,17 @@ def train(
             toc.synchronize()
             # Average time per step in milliseconds.
             ms = tic.elapsed_time(toc)
-            # Measuring models FLOPS instead of hardware FLOPS.
+            # Measuring model FLOPS instead of hardware FLOPS.
             tfps = 6 * macs * batch_size // world_size / ms * 1e-9
             if iter_num > 1:  # First step is warmup.
                 if local_rank == 0:
-                    logger.info(
+                    print(
                         f"{model_name}, "
                         f"ZeRO-{zero_stage}, "
                         f"Sequence: {seq_len}, "
                         f"Batch: {batch_size}, "
                         f"Micro Batch: {micro_batch_size}",
                     )
-                    logger.info("Throughput: {tfps:.2f} TFLOPS", tfps=tfps)
-                    logger.info("Latency: {ms:.2f} milliseconds", ms=ms)
+                    print(f"Throughput: {tfps:.2f} TFLOPS")
+                    print(f"Latency: {ms:.2f} milliseconds")
             tic.record()
