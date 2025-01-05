@@ -1,6 +1,7 @@
 """
 Run `python -m fire matmul/cuda_bf16.py measure` to run for the provided shapes.
-Run `python -m fire matmul/cuda_bf16.py prof_matmul $m $k $n` for user-provided shapes.
+Run `python -m fire matmul/cuda_bf16.py prof_matmul $m $k $n --repeats $r`
+for user-provided shapes.
 """
 from statistics import mean, median, stdev
 
@@ -64,7 +65,7 @@ def prof_matmul(
 
     mss = [tic.elapsed_time(toc) for tic, toc in zip(tics, tocs, strict=True)]
     # Using the exact matmul flops equation.
-    tfps = [1e-9 * m * n * (2 * k - 1) / ms for ms in mss]
+    tfps = [1e-9 * repeats * m * n * (2 * k - 1) / ms for ms in mss]
     print(
         f"({m:5} x {k:5})x({k:5}x{n:5}): "
         f"Mean {mean(tfps):5.1f} TFLOPS, "
