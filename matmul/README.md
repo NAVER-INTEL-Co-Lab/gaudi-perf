@@ -11,6 +11,12 @@ prefetched since their values are known before the computation occurs.
 Because of this, the throughput measurements for both NVIDIA GPUs and Gaudi HPUs
 are made without flushing the cache.
 
+Note that for small matrices below 4Kx4K, the Python host overhead becomes visible during GEMM.
+Because of this, the GEMM throughput measurements implement repeated GEMMs in a single function.
+The implementations are sligtly suboptimal, since it would be best to get `einsum("bmk,bnk->bmn")`
+instead of `einsum("bmk,bnk->mn")` as is implemented in the code. However, this was the best that
+could be done without complicating the code too much. Maybe this can be fixed later.
+
 
 ## Results for FP8 matrix multiplication.
 
