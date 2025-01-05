@@ -132,7 +132,7 @@ def prof_matmul(
         do_cast2: bool = False,
         use_sr1: bool = False,
         use_sr2: bool = False,
-        hpu_graph: bool = False,
+        hpu_graph: bool = True,
         num_steps: int = 256,
         warmup_steps: int = 32,
         repeats: int = 1,  # Increase this value for small matrices below 4Kx4K.
