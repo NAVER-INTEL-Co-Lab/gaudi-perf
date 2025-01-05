@@ -71,20 +71,31 @@ class FP8GEMM(nn.Module):
 
 
 class FP8GEMMS(nn.Module):
-    def __init__(self, s1: Tensor, s2: Tensor, si1: Tensor, si2: Tensor, repeats: int):
+    def __init__(
+            self,
+            s1: Tensor,
+            s2: Tensor,
+            si1: Tensor,
+            si2: Tensor,
+            repeats: int,
+            x1,
+            x1_fp8,
+            x2,
+            x2_fp8,
+    ):
         super().__init__()
         self.fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2)
         self.repeats = repeats
+        self.x1s = x1 if x1 is None else [x1.clone() for _ in range(repeats)]
+        self.x2s = x2 if x2 is None else [x2.clone() for _ in range(repeats)]
+        self.x1_fp8s = None if x1_fp8 is None else [x1_fp8.clone() for _ in range(repeats)]
+        self.x2_fp8s = None if x2_fp8 is None else [x2_fp8.clone() for _ in range(repeats)]
 
     def forward(
             self,
-            x1,
-            x1_fp8,
             rowwise1,
             do_cast1,
             use_sr1,
-            x2,
-            x2_fp8,
             rowwise2,
             do_cast2,
             use_sr2,
@@ -92,34 +103,19 @@ class FP8GEMMS(nn.Module):
     ):
         out = 0
         for i in range(self.repeats):
-            if i % 2 == (torch.rand(1) < 0.5):
-                out += self.fp8_gemm(
-                    x1=x1,
-                    x1_fp8=x1_fp8,
-                    rowwise1=rowwise1,
-                    do_cast1=do_cast1,
-                    use_sr1=use_sr1,
-                    x2=x2,
-                    x2_fp8=x2_fp8,
-                    rowwise2=rowwise2,
-                    do_cast2=do_cast2,
-                    use_sr2=use_sr2,
-                    fp8_dtype=fp8_dtype,
-                )
-            else:
-                out -= self.fp8_gemm(
-                    x1=x1,
-                    x1_fp8=x1_fp8,
-                    rowwise1=rowwise1,
-                    do_cast1=do_cast1,
-                    use_sr1=use_sr1,
-                    x2=x2,
-                    x2_fp8=x2_fp8,
-                    rowwise2=rowwise2,
-                    do_cast2=do_cast2,
-                    use_sr2=use_sr2,
-                    fp8_dtype=fp8_dtype,
-                )
+            out += self.fp8_gemm(
+                x1=self.x1s[i] if do_cast1 else None,
+                x1_fp8=self.x1s_fp8[i] if not do_cast1 else None,
+                rowwise1=rowwise1,
+                do_cast1=do_cast1,
+                use_sr1=use_sr1,
+                x2=self.x2s[i] if do_cast2 else None,
+                x2_fp8=self.x2s_fp8[i] if not do_cast2 else None,
+                rowwise2=rowwise2,
+                do_cast2=do_cast2,
+                use_sr2=use_sr2,
+                fp8_dtype=fp8_dtype,
+            )
 
 @torch.inference_mode()
 def prof_matmul(
@@ -186,7 +182,7 @@ def prof_matmul(
     steps = num_steps + warmup_steps
     tics = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
     tocs = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
-    fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2).to(device)
+    fp8_gemm = FP8GEMMS(s1=s1, s2=s2, si1=si1, si2=si2, repeats=repeats).to(device)
     ht.core.hpu_inference_initialize(fp8_gemm, mark_only_scales_as_const=True)
     if hpu_graph:  # HPU graphs make the run slower. I do not know why.
         fp8_gemm = ht.hpu.wrap_in_hpu_graph(fp8_gemm)
