@@ -78,7 +78,6 @@ def prof_matmul(
     )
 
 
-@torch.inference_mode()
 def measure(
         warmup_steps: int = 32,
         num_steps: int = 256,
@@ -91,11 +90,11 @@ def measure(
     torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = reduced_precision_reduction
 
     mknr = (
-        (16384, 8192, 1280, 16),
-        (16384, 1024, 8192, 16),
+        (16384, 8192, 1280, 1),
+        (16384, 1024, 8192, 1),
         (16384, 8192, 7168, 1),
         (16384, 3584, 8192, 1),
-        (2 ** 12, 2 ** 12, 2 ** 12, 16),
+        (2 ** 12, 2 ** 12, 2 ** 12, 1),
         (2 ** 13, 2 ** 13, 2 ** 13, 1),
         (2 ** 14, 2 ** 14, 2 ** 14, 1),
         (2 ** 15, 2 ** 15, 2 ** 15, 1),
