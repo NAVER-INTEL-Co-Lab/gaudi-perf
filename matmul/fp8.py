@@ -116,6 +116,7 @@ class FP8GEMMS(nn.Module):
                 use_sr2=use_sr2,
                 fp8_dtype=fp8_dtype,
             )
+        return out
 
 @torch.inference_mode()
 def prof_matmul(
