@@ -86,10 +86,10 @@ class FP8GEMMS(nn.Module):
         super().__init__()
         self.fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2)
         self.repeats = repeats
-        self.x1s = x1 if x1 is None else [x1.clone() for _ in range(repeats)]
-        self.x2s = x2 if x2 is None else [x2.clone() for _ in range(repeats)]
-        self.x1_fp8s = None if x1_fp8 is None else [x1_fp8.clone() for _ in range(repeats)]
-        self.x2_fp8s = None if x2_fp8 is None else [x2_fp8.clone() for _ in range(repeats)]
+        self.x1s = x1 if x1 is None else [x1 + (i / 128) for i in range(repeats)]
+        self.x2s = x2 if x2 is None else [x2 + (i / 128) for i in range(repeats)]
+        self.x1_fp8s = None if x1_fp8 is None else [x1_fp8 + (i / 128) for i in range(repeats)]
+        self.x2_fp8s = None if x2_fp8 is None else [x2_fp8 + (i / 128) for i in range(repeats)]
 
     def forward(
             self,
