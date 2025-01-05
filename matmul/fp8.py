@@ -186,7 +186,7 @@ def prof_matmul(
     steps = num_steps + warmup_steps
     tics = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
     tocs = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
-    fp8_gemm = FP8GEMMS(s1=s1, s2=s2, si1=si1, si2=si2, repeats=repeats).to(device)
+    fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2).to(device)
     ht.core.hpu_inference_initialize(fp8_gemm, mark_only_scales_as_const=True)
     if hpu_graph:  # HPU graphs make the run slower. I do not know why.
         fp8_gemm = ht.hpu.wrap_in_hpu_graph(fp8_gemm)
