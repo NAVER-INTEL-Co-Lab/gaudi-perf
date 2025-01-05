@@ -192,13 +192,13 @@ def prof_matmul(
         tics[i].wait()  # Prevent asynchronous launches.
         tics[i].record()
         out = fp8_gemm(
-            x1=x1,
-            x1_fp8=x1_fp8,
+            # x1=x1,
+            # x1_fp8=x1_fp8,
             rowwise1=rowwise1,
             do_cast1=do_cast1,
             use_sr1=use_sr1,
-            x2=x2,
-            x2_fp8=x2_fp8,
+            # x2=x2,
+            # x2_fp8=x2_fp8,
             rowwise2=rowwise2,
             do_cast2=do_cast2,
             use_sr2=use_sr2,
