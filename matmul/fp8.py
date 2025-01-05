@@ -183,6 +183,7 @@ def prof_matmul(
     steps = num_steps + warmup_steps
     tics = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
     tocs = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
+    # fp8_gemm = FP8GEMMS(s1=s1, s2=s2, si1=si1, si2=si2)
     fp8_gemm = FP8GEMMS(s1=s1, s2=s2, si1=si1, si2=si2, repeats=repeats,
                         x1=x1, x1_fp8=x1_fp8, x2=x2, x2_fp8=x2_fp8).to(device)
     ht.core.hpu_inference_initialize(fp8_gemm, mark_only_scales_as_const=True)
