@@ -92,7 +92,7 @@ class FP8GEMMS(nn.Module):
     ):
         out = 0
         for i in range(self.repeats):
-            if i % 2 == 0:
+            if i % 2 == (torch.rand(1) < 0.5):
                 out += self.fp8_gemm(
                     x1=x1,
                     x1_fp8=x1_fp8,
