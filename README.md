@@ -26,4 +26,6 @@ Run this command when you wish to rebuild the Docker image.
 For instructions on matrix multiplication throughput measurements,
 visit the `matmul` directory. Commands are described in their respective files.
 
-To measure prefill throughputs for Llama models, visit the `prefill` directory.
+To measure prefill throughput for Llama models, visit the `prefill` directory.
+
+Single-node training throughput is available in the `train` directory.

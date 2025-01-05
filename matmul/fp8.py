@@ -2,7 +2,7 @@
 Profile FP8 scaled GEMM throughput at different configurations.
 
 Example command for (4096 x 16384) x (16384 x 8192) matmul:
-PT_HPU_WEIGHT_SHARING=0 python -m fire matmul/fp8.py measure 4096 16384 8192
+PT_HPU_WEIGHT_SHARING=0 python -m fire matmul/fp8.py prof_matmul 4096 16384 8192
 """
 import warnings
 from statistics import mean, stdev, median
@@ -70,8 +70,56 @@ class FP8GEMM(nn.Module):
         )
 
 
+class FP8GEMMS(nn.Module):
+    def __init__(
+            self,
+            s1: Tensor,
+            s2: Tensor,
+            si1: Tensor,
+            si2: Tensor,
+            repeats: int,
+            x1,
+            x1_fp8,
+            x2,
+            x2_fp8,
+    ):
+        super().__init__()
+        self.fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2)
+        self.repeats = repeats
+        self.x1s = x1 if x1 is None else [x1.clone() for i in range(repeats)]
+        self.x2s = x2 if x2 is None else [x2.clone() for i in range(repeats)]
+        self.x1_fp8s = None if x1_fp8 is None else [x1_fp8.clone() for i in range(repeats)]
+        self.x2_fp8s = None if x2_fp8 is None else [x2_fp8.clone() for i in range(repeats)]
+
+    def forward(
+            self,
+            rowwise1,
+            do_cast1,
+            use_sr1,
+            rowwise2,
+            do_cast2,
+            use_sr2,
+            fp8_dtype,
+    ):
+        out = 0
+        for i in range(self.repeats):
+            out += self.fp8_gemm(
+                x1=self.x1s[i] if do_cast1 else None,
+                x1_fp8=self.x1_fp8s[i] if not do_cast1 else None,
+                rowwise1=rowwise1,
+                do_cast1=do_cast1,
+                use_sr1=use_sr1,
+                x2=self.x2s[i] if do_cast2 else None,
+                x2_fp8=self.x2_fp8s[i] if not do_cast2 else None,
+                rowwise2=rowwise2,
+                do_cast2=do_cast2,
+                use_sr2=use_sr2,
+                fp8_dtype=fp8_dtype,
+            )
+        return out
+
 @torch.inference_mode()
-def measure(
+def prof_matmul(
         m: int,
         k: int,
         n: int,
@@ -84,9 +132,10 @@ def measure(
         do_cast2: bool = False,
         use_sr1: bool = False,
         use_sr2: bool = False,
-        hpu_graph: bool = False,
+        hpu_graph: bool = True,
         num_steps: int = 256,
         warmup_steps: int = 32,
+        repeats: int = 1,  # Increase this value for small matrices below 4Kx4K.
 ):
     ht.core.hpu_set_inference_env()
     configs = {k: v for k, v in locals().items() if not k.startswith("_")}
@@ -134,7 +183,9 @@ def measure(
     steps = num_steps + warmup_steps
     tics = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
     tocs = [ht.hpu.Event(enable_timing=True) for _ in range(steps)]
-    fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2).to(device)
+    # fp8_gemm = FP8GEMMS(s1=s1, s2=s2, si1=si1, si2=si2)
+    fp8_gemm = FP8GEMMS(s1=s1, s2=s2, si1=si1, si2=si2, repeats=repeats,
+                        x1=x1, x1_fp8=x1_fp8, x2=x2, x2_fp8=x2_fp8).to(device)
     ht.core.hpu_inference_initialize(fp8_gemm, mark_only_scales_as_const=True)
     if hpu_graph:  # HPU graphs make the run slower. I do not know why.
         fp8_gemm = ht.hpu.wrap_in_hpu_graph(fp8_gemm)
@@ -143,13 +194,13 @@ def measure(
         tics[i].wait()  # Prevent asynchronous launches.
         tics[i].record()
         out = fp8_gemm(
-            x1=x1,
-            x1_fp8=x1_fp8,
+            # x1=x1,
+            # x1_fp8=x1_fp8,
             rowwise1=rowwise1,
             do_cast1=do_cast1,
             use_sr1=use_sr1,
-            x2=x2,
-            x2_fp8=x2_fp8,
+            # x2=x2,
+            # x2_fp8=x2_fp8,
             rowwise2=rowwise2,
             do_cast2=do_cast2,
             use_sr2=use_sr2,
@@ -163,7 +214,7 @@ def measure(
     tocs = tocs[warmup_steps:]
     mss = [tic.elapsed_time(toc) for tic, toc in zip(tics, tocs, strict=True)]
     # Using the exact equation for matrix multiplication FLOP counts.
-    tfps = [m * n * (2 * k - 1) / ms * 1e-9 for ms in mss]
+    tfps = [1e-9 * repeats * m * n * (2 * k - 1) / ms for ms in mss]
     print(
         *[f"{k}: {v}," for k, v in configs.items()],
         f"Mean: {mean(tfps):.1f} TFLOPS,",
