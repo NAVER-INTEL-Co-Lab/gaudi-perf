@@ -105,12 +105,12 @@ class FP8GEMMS(nn.Module):
         for i in range(self.repeats):
             out += self.fp8_gemm(
                 x1=self.x1s[i] if do_cast1 else None,
-                x1_fp8=self.x1s_fp8[i] if not do_cast1 else None,
+                x1_fp8=self.x1s_fp8s[i] if not do_cast1 else None,
                 rowwise1=rowwise1,
                 do_cast1=do_cast1,
                 use_sr1=use_sr1,
                 x2=self.x2s[i] if do_cast2 else None,
-                x2_fp8=self.x2s_fp8[i] if not do_cast2 else None,
+                x2_fp8=self.x2s_fp8s[i] if not do_cast2 else None,
                 rowwise2=rowwise2,
                 do_cast2=do_cast2,
                 use_sr2=use_sr2,
