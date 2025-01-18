@@ -28,7 +28,7 @@ import logging
 from statistics import mean, stdev
 
 import torch
-from torch import nn
+from torch import nn, Tensor
 import habana_frameworks.torch as ht
 import habana_frameworks.torch.core as htcore
 from neural_compressor.torch.quantization import (
@@ -37,6 +37,20 @@ from neural_compressor.torch.quantization import (
     prepare, 
     finalize_calibration,
 )
+
+
+class MM(nn.Module):
+    def __init__(self, k: int, n: int):
+        super().__init__()
+        self.layer = nn.Linear(in_features=k, out_features=n, bias=False, device="hpu")
+
+    def forward(self, x: Tensor):
+        if x.ndim == 3:
+            return [self.layer(xx) for xx in x.unbind(dim=0)]
+        elif x.ndim == 2:
+            return self.layer(x)
+        else:
+            raise NotImplementedError
 
 
 htcore.hpu_set_env()
@@ -52,7 +66,8 @@ def prof_matmul(
         scale_method: str = "maxabs_hw",
         scale_format: str = "const",
         measure_mode: bool = True,
-        _warmup_steps: int = 32,
+        warmup_steps: int = 32,
+        repeats: int = 1
 ):
     logging.disable(logging.WARNING)  # No logging for the demo.
 
@@ -77,9 +92,10 @@ def prof_matmul(
         "dump_stats_path": dump_stats_path,
     })
 
-    a = torch.randn(size=(m, k), device="hpu")
+    a = torch.randn(size=(repeats, m, k), device="hpu")
     # The Sequential layer is necessary because INC cannot take a single module.
-    model = nn.Sequential(nn.Linear(in_features=k, out_features=n, bias=False, device="hpu"))
+    # model = nn.Sequential(nn.Linear(in_features=k, out_features=n, bias=False, device="hpu"))
+    model = MM(k=k, n=n).to(device="hpu")
 
     if measure_mode:
         model_measure = prepare(model, config_measure)
@@ -91,9 +107,9 @@ def prof_matmul(
         htcore.hpu_inference_initialize(model_quant, mark_only_scales_as_const=True)
         model_quant = ht.hpu.wrap_in_hpu_graph(model_quant)
 
-        for _ in range(16):  # Warmup
+        for _ in range(warmup_steps):  # Warmup
             model_quant(a)
-        
+
         tics = [ht.hpu.Event(enable_timing=True) for _ in range(num_steps)]
         tocs = [ht.hpu.Event(enable_timing=True) for _ in range(num_steps)]
         for i in range(num_steps):
