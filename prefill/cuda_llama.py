@@ -75,7 +75,6 @@ def main(
         batch_size: int = 1,
         tensor_parallel_size: int = 8,
         quantization: str | None = None,
-        use_cache: bool = False,
 ):
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
     hs = config.hidden_size
@@ -103,7 +102,6 @@ def main(
         quantization=quantization,
         enable_chunked_prefill=False,  # Enabled by default when the input is 32K+.
         max_seq_len_to_capture=seq_len,  # Use CUDA graphs.
-        cache_dir="/opt/project/.hf_cache" if use_cache else None,
     )
     sampling_params = SamplingParams(max_tokens=1)
 
