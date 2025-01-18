@@ -86,10 +86,10 @@ class FP8GEMMS(nn.Module):
         super().__init__()
         self.fp8_gemm = FP8GEMM(s1=s1, s2=s2, si1=si1, si2=si2)
         self.repeats = repeats
-        self.x1s = x1 if x1 is None else [x1.clone() for i in range(repeats)]
-        self.x2s = x2 if x2 is None else [x2.clone() for i in range(repeats)]
-        self.x1_fp8s = None if x1_fp8 is None else [x1_fp8.clone() for i in range(repeats)]
-        self.x2_fp8s = None if x2_fp8 is None else [x2_fp8.clone() for i in range(repeats)]
+        self.x1s = x1 if x1 is None else [x1.clone() for _ in range(repeats)]
+        self.x2s = x2 if x2 is None else [x2.clone() for _ in range(repeats)]
+        self.x1_fp8s = None if x1_fp8 is None else [x1_fp8.clone() for _ in range(repeats)]
+        self.x2_fp8s = None if x2_fp8 is None else [x2_fp8.clone() for _ in range(repeats)]
 
     def forward(
             self,
@@ -101,21 +101,37 @@ class FP8GEMMS(nn.Module):
             use_sr2,
             fp8_dtype,
     ):
-        out = 0
+        out = None
         for i in range(self.repeats):
-            out += self.fp8_gemm(
-                x1=self.x1s[i] if do_cast1 else None,
-                x1_fp8=self.x1_fp8s[i] if not do_cast1 else None,
-                rowwise1=rowwise1,
-                do_cast1=do_cast1,
-                use_sr1=use_sr1,
-                x2=self.x2s[i] if do_cast2 else None,
-                x2_fp8=self.x2_fp8s[i] if not do_cast2 else None,
-                rowwise2=rowwise2,
-                do_cast2=do_cast2,
-                use_sr2=use_sr2,
-                fp8_dtype=fp8_dtype,
-            )
+            if out is None:
+                out = self.fp8_gemm(
+                    x1=self.x1s[0] if do_cast1 else None,
+                    x1_fp8=self.x1_fp8s[0] if not do_cast1 else None,
+                    rowwise1=rowwise1,
+                    do_cast1=do_cast1,
+                    use_sr1=use_sr1,
+                    x2=self.x2s[0] if do_cast2 else None,
+                    x2_fp8=self.x2_fp8s[0] if not do_cast2 else None,
+                    rowwise2=rowwise2,
+                    do_cast2=do_cast2,
+                    use_sr2=use_sr2,
+                    fp8_dtype=fp8_dtype,
+                )
+            else:
+                out += self.fp8_gemm(
+                    x1=self.x1s[i] if do_cast1 else None,
+                    x1_fp8=self.x1_fp8s[i] if not do_cast1 else None,
+                    rowwise1=rowwise1,
+                    do_cast1=do_cast1,
+                    use_sr1=use_sr1,
+                    x2=self.x2s[i] if do_cast2 else None,
+                    x2_fp8=self.x2_fp8s[i] if not do_cast2 else None,
+                    rowwise2=rowwise2,
+                    do_cast2=do_cast2,
+                    use_sr2=use_sr2,
+                    fp8_dtype=fp8_dtype,
+                )
+
         return out
 
 @torch.inference_mode()
