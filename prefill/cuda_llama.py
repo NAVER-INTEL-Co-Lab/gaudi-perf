@@ -7,7 +7,7 @@ The `transformers` version must be compatible with Llama v3.1 for this example.
 
 ```bash
 python -m fire prefill/cuda_llama.py main \
-    --model_name meta-llama/Llama-3.1-70B \
+    --model_name meta-llama/Llama-3.3-70B-Instruct \
     --seq_len $((8 * 1024)) \
     --num_steps 32
 ```
@@ -68,7 +68,14 @@ def approx_llama_forward_macs(
     return macs  # MAC count.
 
 
-def main(model_name: str, seq_len, num_steps, tensor_parallel_size: int = 8):
+def main(
+        model_name: str,
+        seq_len: int,
+        num_steps: int,
+        batch_size: int = 1,
+        tensor_parallel_size: int = 8,
+        quantization: str | None = None,
+):
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
     hs = config.hidden_size
     vs = config.vocab_size
@@ -91,7 +98,8 @@ def main(model_name: str, seq_len, num_steps, tensor_parallel_size: int = 8):
     model = LLM(
         model_name, 
         tensor_parallel_size=tensor_parallel_size, 
-        dtype=torch.bfloat16, 
+        dtype=torch.bfloat16,
+        quantization=quantization,
         enable_chunked_prefill=False,  # Enabled by default when the input is 32K+.
         max_seq_len_to_capture=seq_len,  # Use CUDA graphs.
     )
@@ -101,8 +109,9 @@ def main(model_name: str, seq_len, num_steps, tensor_parallel_size: int = 8):
     toc = torch.cuda.Event(enable_timing=True)
 
     for _ in range(16):  # Warmup
-        x = torch.randint(low=0, high=config.vocab_size, size=(seq_len,), dtype=torch.int64).tolist()
-        model.generate(TokensPrompt(prompt_token_ids=x), sampling_params=sampling_params, use_tqdm=False)
+        x = torch.randint(low=0, high=config.vocab_size, size=(batch_size, seq_len), dtype=torch.int64).tolist()
+        tps = [TokensPrompt(prompt_token_ids=xs) for xs in x]
+        model.generate(tps, sampling_params=sampling_params, use_tqdm=False)
 
     tic.wait()
     tic.record()
@@ -113,5 +122,5 @@ def main(model_name: str, seq_len, num_steps, tensor_parallel_size: int = 8):
     torch.cuda.synchronize()
     ms = tic.elapsed_time(toc)
 
-    tfps = flops * num_steps * 1e-9 / tensor_parallel_size / ms
+    tfps = flops * batch_size * num_steps * 1e-9 / tensor_parallel_size / ms
     print(f"\n\nTFLOPS/GPU: {tfps:.1f}\n\n")
