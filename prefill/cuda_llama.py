@@ -27,10 +27,6 @@ import torch
 from transformers import AutoConfig
 from vllm import LLM, SamplingParams
 from vllm.inputs import TokensPrompt
-from llmcompressor.transformers import SparseAutoModelForCausalLM
-from transformers import AutoTokenizer
-from llmcompressor.transformers import oneshot
-from llmcompressor.modifiers.quantization import QuantizationModifier
 
 
 def approx_llama_forward_macs(
@@ -70,30 +66,6 @@ def approx_llama_forward_macs(
     head_macs = sequence_length * hidden_size * vocabulary_size
     macs = head_macs + num_decoder_blocks * (attn_macs + ffn_macs)
     return macs  # MAC count.
-
-
-def save_rowwise_dynamic_fp8_model(
-        model_name: str,
-        save_path: str,
-        cache_dir: str | None = None,
-):
-    model = SparseAutoModelForCausalLM.from_pretrained(
-        model_name,
-        device_map="cpu",
-        torch_dtype=torch.bfloat16,
-        cache_dir=cache_dir,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    # Apply dynamic row-wise FP8 quantization
-    # to all linear layers except the LM head.
-    recipe = QuantizationModifier(
-        targets="Linear",
-        scheme="FP8_DYNAMIC",
-        ignore=["lm_head"],
-    )
-    oneshot(model=model, recipe=recipe)
-    model.save_pretrained(save_path)
-    tokenizer.save_pretrained(save_path)
 
 
 def main(
