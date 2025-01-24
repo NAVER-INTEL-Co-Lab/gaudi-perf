@@ -132,7 +132,8 @@ def approx_llama_forward_macs(
     if head_dim is None:
         head_dim = hidden_size // num_attention_heads
     # Query, Key, Value linear projection with Group Query Attention.
-    qkv_macs = sequence_length * hidden_size * head_dim * (num_attention_heads + 2 * num_key_value_heads)
+    num_qkv_heads = num_attention_heads + 2 * num_key_value_heads
+    qkv_macs = sequence_length * hidden_size * head_dim * num_qkv_heads
     # Matrix multiply QK^T to get the self-attention matrix.
     qkt_macs = sequence_length * (head_dim * num_attention_heads) * sequence_length
     # Self-attention with the value tensor.
@@ -142,8 +143,9 @@ def approx_llama_forward_macs(
     # Total number of MACs in attention.
     attn_macs = qkv_macs + qkt_macs + sav_macs + pap_macs
     # Exclude causal attention mask MACs from the total MAC count if desired.
-    causal_macs = (head_dim * num_attention_heads) * sequence_length * (sequence_length - 1) // 2
-    attn_macs -= int(exclude_causal_mask) * 2 * causal_macs
+    mask_shape = (sequence_length * (sequence_length - 1)) // 2
+    mask_macs = head_dim * num_attention_heads * mask_shape
+    attn_macs -= int(exclude_causal_mask) * 2 * mask_macs
     ffn_macs = sequence_length * hidden_size * intermediate_size
     # SwiGLU and other gated FFNs have another matrix multiply.
     ffn_macs *= 2 + int(gated_ffn_act)
@@ -185,6 +187,7 @@ def train(
         offload_param: bool = True,
         full_bf16: bool = False,
         use_liger_kernel: bool = False,
+        exclude_causal_mask: bool = False,
 ):
     deepspeed.init_distributed(dist_backend="nccl")
     if use_liger_kernel:
@@ -230,22 +233,16 @@ def train(
     if offload_param:
         ds_config.update({"offload_param": {"device": "cpu", "pin_memory": True}})
 
-    config = AutoConfig.from_pretrained(model_name, )
-    hs = config.hidden_size
-    vs = config.vocab_size
-    nl = config.num_hidden_layers
-    it = config.intermediate_size
-    nh = config.num_attention_heads
-    kv = config.num_key_value_heads
-
+    config = AutoConfig.from_pretrained(model_name)
     macs = approx_llama_forward_macs(
-        num_decoder_blocks=nl,
+        num_decoder_blocks=config.num_hidden_layers,
         sequence_length=seq_len,
-        vocabulary_size=vs,
-        hidden_size=hs,
-        intermediate_size=it,
-        num_attention_heads=nh,
-        num_key_value_heads=kv,
+        vocabulary_size=config.vocab_size,
+        hidden_size=config.hidden_size,
+        intermediate_size=config.intermediate_size,
+        num_attention_heads=config.num_attention_heads,
+        num_key_value_heads=config.num_key_value_heads,
+        exclude_causal_mask=exclude_causal_mask,
         gated_ffn_act=True,
     )
     device = torch.device(f"cuda:{local_rank}")
@@ -272,8 +269,8 @@ def train(
     engine.train()
 
     iter_num = 0
-    x = torch.randint(high=vs, size=(micro_batch_size, seq_len), device=device)
-    y = torch.randint(high=vs, size=(micro_batch_size, seq_len), device=device)
+    x = torch.randint(config.vocab_size, size=(micro_batch_size, seq_len), device=device)
+    y = torch.randint(config.vocab_size, size=(micro_batch_size, seq_len), device=device)
     tic = Event(enable_timing=True)
     toc = Event(enable_timing=True)
 
