@@ -24,13 +24,10 @@ class MM(nn.Module):
         self.m2s = [torch.randn(size=(n, k), **dd) for _ in range(repeats)]
 
     def forward(self):  # Equivalent to einsum("bmk,bnk->mn")
-        out = None
+        outs = list()
         for m1, m2 in zip(self.m1s, self.m2s, strict=True):
-            if out is None:
-                out = torch.mm(input=m1, mat2=m2.T)
-            else:
-                out += torch.mm(input=m1, mat2=m2.T)
-        return out
+            outs.append(torch.mm(input=m1, mat2=m2.T))
+        return outs
 
 
 @torch.inference_mode()

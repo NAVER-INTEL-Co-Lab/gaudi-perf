@@ -101,38 +101,23 @@ class FP8GEMMS(nn.Module):
             use_sr2,
             fp8_dtype,
     ):
-        out = None
+        outs = list()
         for i in range(self.repeats):
-            if out is None:
-                out = self.fp8_gemm(
-                    x1=self.x1s[0] if do_cast1 else None,
-                    x1_fp8=self.x1_fp8s[0] if not do_cast1 else None,
-                    rowwise1=rowwise1,
-                    do_cast1=do_cast1,
-                    use_sr1=use_sr1,
-                    x2=self.x2s[0] if do_cast2 else None,
-                    x2_fp8=self.x2_fp8s[0] if not do_cast2 else None,
-                    rowwise2=rowwise2,
-                    do_cast2=do_cast2,
-                    use_sr2=use_sr2,
-                    fp8_dtype=fp8_dtype,
-                )
-            else:
-                out += self.fp8_gemm(
-                    x1=self.x1s[i] if do_cast1 else None,
-                    x1_fp8=self.x1_fp8s[i] if not do_cast1 else None,
-                    rowwise1=rowwise1,
-                    do_cast1=do_cast1,
-                    use_sr1=use_sr1,
-                    x2=self.x2s[i] if do_cast2 else None,
-                    x2_fp8=self.x2_fp8s[i] if not do_cast2 else None,
-                    rowwise2=rowwise2,
-                    do_cast2=do_cast2,
-                    use_sr2=use_sr2,
-                    fp8_dtype=fp8_dtype,
-                )
-
-        return out
+            out = self.fp8_gemm(  # noqa
+                x1=self.x1s[0] if do_cast1 else None,
+                x1_fp8=self.x1_fp8s[0] if not do_cast1 else None,
+                rowwise1=rowwise1,
+                do_cast1=do_cast1,
+                use_sr1=use_sr1,
+                x2=self.x2s[0] if do_cast2 else None,
+                x2_fp8=self.x2_fp8s[0] if not do_cast2 else None,
+                rowwise2=rowwise2,
+                do_cast2=do_cast2,
+                use_sr2=use_sr2,
+                fp8_dtype=fp8_dtype,
+            )
+            outs.append(out)
+        return outs
 
 @torch.inference_mode()
 def prof_matmul(
@@ -203,7 +188,7 @@ def prof_matmul(
     fp8_gemm = FP8GEMMS(s1=s1, s2=s2, si1=si1, si2=si2, repeats=repeats,
                         x1=x1, x1_fp8=x1_fp8, x2=x2, x2_fp8=x2_fp8).to(device)
     ht.core.hpu_inference_initialize(fp8_gemm, mark_only_scales_as_const=True)
-    if hpu_graph:  # HPU graphs make the run slower. I do not know why.
+    if hpu_graph:
         fp8_gemm = ht.hpu.wrap_in_hpu_graph(fp8_gemm)
 
     for i in range(num_steps + warmup_steps):
