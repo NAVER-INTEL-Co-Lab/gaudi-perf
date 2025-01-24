@@ -145,8 +145,7 @@ def measure(
         scale_format: str = "const",
         measure_mode: bool = True,
 ) -> None:
-    # Scale format of `scalar` is supposedly faster.
-    # https://docs.habana.ai/en/v1.18.0/PyTorch/Inference_on_PyTorch/Inference_Using_FP8.html#compile-time-and-throughput-optimization
+    # Scale format of `scalar` might be faster.
     mkn = (
         (16384, 8192, 1280),
         (16384, 1024, 8192),
