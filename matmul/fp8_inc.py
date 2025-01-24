@@ -51,7 +51,7 @@ class MM(nn.Module):
 
     def forward(self, x: Tensor):
         assert x.ndim == 3
-        assert x.dim(0) == len(self.layers)
+        assert x.size(0) == len(self.layers)
         outs = list()
         for i, xx in enumerate(x.unbind(dim=0)):
             out = self.layers[i](xx)
