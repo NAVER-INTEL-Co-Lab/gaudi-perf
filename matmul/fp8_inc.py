@@ -56,7 +56,7 @@ class MM(nn.Module):
         for i, xx in enumerate(x.unbind(dim=0)):
             out = self.layers[i](xx)
             outs.append(out)
-        return outs
+        return torch.stack(outs)
 
 
 htcore.hpu_set_env()
