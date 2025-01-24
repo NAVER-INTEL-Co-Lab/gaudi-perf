@@ -42,12 +42,12 @@ from neural_compressor.torch.quantization import (
 class MM(nn.Module):
     def __init__(self, k: int, n: int, r: int, device: str | torch.device):
         super().__init__()
-        self.layers = tuple(nn.Linear(
+        self.layers = nn.ModuleList([nn.Linear(
             in_features=k,
             out_features=n,
             bias=False,
             device=device,
-        ) for _ in range(r))
+        ) for _ in range(r)])
 
     def forward(self, x: Tensor):
         assert x.ndim == 3
@@ -56,7 +56,7 @@ class MM(nn.Module):
         for i, xx in enumerate(x.unbind(dim=0)):
             out = self.layers[i](xx)
             outs.append(out)
-        return torch.stack(outs)
+        return outs
 
 
 htcore.hpu_set_env()
