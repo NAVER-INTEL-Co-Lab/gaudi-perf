@@ -85,7 +85,6 @@ def measure(num_steps: int = 256, data_type: str = "bf16") -> None:
         (2 ** 12, 2 ** 12, 2 ** 12, 1),
         (2 ** 13, 2 ** 13, 2 ** 13, 1),
         (2 ** 14, 2 ** 14, 2 ** 14, 1),
-        (2 ** 15, 2 ** 15, 2 ** 15, 1),
     )
     for m, k, n, r in mknr:
         prof_matmul(m, k, n, num_steps=num_steps, data_type=data_type, repeats=r)
