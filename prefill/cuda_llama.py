@@ -46,7 +46,8 @@ def approx_llama_forward_macs(
     if head_dim is None:
         head_dim = hidden_size // num_attention_heads
     # Query, Key, Value linear projection with Group Query Attention.
-    qkv_macs = sequence_length * hidden_size * head_dim * (num_attention_heads + 2 * num_key_value_heads)
+    num_qkv_heads = num_attention_heads + 2 * num_key_value_heads
+    qkv_macs = sequence_length * hidden_size * head_dim * num_qkv_heads
     # Matrix multiply QK^T to get the self-attention matrix.
     qkt_macs = sequence_length * (head_dim * num_attention_heads) * sequence_length
     # Self-attention with the value tensor.
@@ -56,8 +57,9 @@ def approx_llama_forward_macs(
     # Total number of MACs in attention.
     attn_macs = qkv_macs + qkt_macs + sav_macs + pap_macs
     # Exclude causal attention mask MACs from the total MAC count if desired.
-    causal_macs = (head_dim * num_attention_heads) * sequence_length * (sequence_length - 1) // 2
-    attn_macs -= int(exclude_causal_mask) * 2 * causal_macs
+    mask_shape = (sequence_length * (sequence_length - 1)) // 2
+    mask_macs = head_dim * num_attention_heads * mask_shape
+    attn_macs -= int(exclude_causal_mask) * 2 * mask_macs
     ffn_macs = sequence_length * hidden_size * intermediate_size
     # SwiGLU and other gated FFNs have another matrix multiply.
     ffn_macs *= 2 + int(gated_ffn_act)
@@ -74,25 +76,21 @@ def main(
         num_steps: int,
         batch_size: int = 1,
         tensor_parallel_size: int = 8,
+        exclude_causal_mask: bool = False,
         quantization: str | None = None,
 ):
-    config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
-    hs = config.hidden_size
-    vs = config.vocab_size
-    nl = config.num_hidden_layers
-    it = config.intermediate_size
-    nh = config.num_attention_heads
-    kv = config.num_key_value_heads
+    config = AutoConfig.from_pretrained(model_name)
 
     flops = approx_llama_forward_macs(
-        num_decoder_blocks=nl,
+        num_decoder_blocks=config.num_hidden_layers,
         sequence_length=seq_len,
-        vocabulary_size=vs,   
-        hidden_size=hs,
-        intermediate_size=it,
-        num_attention_heads=nh,
-        num_key_value_heads=kv,
+        vocabulary_size=config.vocab_size,
+        hidden_size=config.hidden_size,
+        intermediate_size=config.intermediate_size,
+        num_attention_heads=config.num_attention_heads,
+        num_key_value_heads=config.num_key_value_heads,
         gated_ffn_act=True,
+        exclude_causal_mask=exclude_causal_mask,
     ) * 2  # 1 MAC is approximately 2 FLOPs.
 
     model = LLM(
@@ -100,7 +98,7 @@ def main(
         tensor_parallel_size=tensor_parallel_size, 
         dtype=torch.bfloat16,
         quantization=quantization,
-        enable_chunked_prefill=False,  # Enabled by default when the input is 32K+.
+        enable_chunked_prefill=False,  # Enabled by default if the input is 32K+
         max_seq_len_to_capture=seq_len,  # Use CUDA graphs.
     )
     sampling_params = SamplingParams(max_tokens=1)
@@ -109,15 +107,29 @@ def main(
     toc = torch.cuda.Event(enable_timing=True)
 
     for _ in range(16):  # Warmup
-        x = torch.randint(low=0, high=config.vocab_size, size=(batch_size, seq_len), dtype=torch.int64).tolist()
+        x = torch.randint(
+            low=0,
+            high=config.vocab_size,
+            size=(batch_size, seq_len),
+            dtype=torch.int64,
+        ).tolist()
         tps = [TokensPrompt(prompt_token_ids=xs) for xs in x]
         model.generate(tps, sampling_params=sampling_params, use_tqdm=False)
 
     tic.wait()
     tic.record()
     for _ in range(num_steps):
-        x = torch.randint(low=0, high=config.vocab_size, size=(seq_len,), dtype=torch.int64).tolist()
-        model.generate(TokensPrompt(prompt_token_ids=x), sampling_params=sampling_params, use_tqdm=False)
+        x = torch.randint(
+            low=0,
+            high=config.vocab_size,
+            size=(seq_len,),
+            dtype=torch.int64,
+        ).tolist()
+        model.generate(
+            TokensPrompt(prompt_token_ids=x),
+            sampling_params=sampling_params,
+            use_tqdm=False,
+        )
     toc.record()
     torch.cuda.synchronize()
     ms = tic.elapsed_time(toc)

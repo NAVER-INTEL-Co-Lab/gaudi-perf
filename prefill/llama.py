@@ -55,7 +55,8 @@ def approx_llama_forward_macs(
     if head_dim is None:
         head_dim = hidden_size // num_attention_heads
     # Query, Key, Value linear projection with Group Query Attention.
-    qkv_macs = sequence_length * hidden_size * head_dim * (num_attention_heads + 2 * num_key_value_heads)
+    num_qkv_heads = num_attention_heads + 2 * num_key_value_heads
+    qkv_macs = sequence_length * hidden_size * head_dim * num_qkv_heads
     # Matrix multiply QK^T to get the self-attention matrix.
     qkt_macs = sequence_length * (head_dim * num_attention_heads) * sequence_length
     # Self-attention with the value tensor.
@@ -65,8 +66,9 @@ def approx_llama_forward_macs(
     # Total number of MACs in attention.
     attn_macs = qkv_macs + qkt_macs + sav_macs + pap_macs
     # Exclude causal attention mask MACs from the total MAC count if desired.
-    causal_macs = (head_dim * num_attention_heads) * sequence_length * (sequence_length - 1) // 2
-    attn_macs -= int(exclude_causal_mask) * 2 * causal_macs
+    mask_shape = (sequence_length * (sequence_length - 1)) // 2
+    mask_macs = head_dim * num_attention_heads * mask_shape
+    attn_macs -= int(exclude_causal_mask) * 2 * mask_macs
     ffn_macs = sequence_length * hidden_size * intermediate_size
     # SwiGLU and other gated FFNs have another matrix multiply.
     ffn_macs *= 2 + int(gated_ffn_act)
@@ -83,6 +85,7 @@ def measure(
         seq_len: int,
         batch_size: int,
         num_steps: int,
+        exclude_causal_mask: bool,
 ) -> dict:
     config = AutoConfig.from_pretrained(model_name)
 
@@ -94,6 +97,7 @@ def measure(
         intermediate_size=config.intermediate_size,
         num_attention_heads=config.num_attention_heads,
         num_key_value_heads=config.num_key_value_heads,
+        exclude_causal_mask=exclude_causal_mask,
         gated_ffn_act=True,
     )
 
@@ -142,6 +146,7 @@ def measure(
         "PyTorch Version": torch.__version__,
         "DeepSpeed Version": deepspeed.__version__,
         "Mean Tokens per Second": mean(tkps),
+        "Exclude Causal MACs": exclude_causal_mask,
         "Model Mean TFLOPS": mean(tfps),
         "Model Min TFLOPS": min(tfps),
         "Model Max TFLOPS": max(tfps),
@@ -157,6 +162,7 @@ def main(
         num_steps: int = 16,
         batch_size: int = 1,
         seq_len: int = 4096,
+        exclude_causal_mask: bool = False,
         use_hpu_graph: bool = True,
 ):
     deepspeed.init_distributed(dist_backend="hccl")
@@ -184,6 +190,7 @@ def main(
         batch_size=batch_size,
         seq_len=seq_len,
         num_steps=num_steps,
+        exclude_causal_mask=exclude_causal_mask,
     )
     info.update({
         "Local Rank": local_rank, 
@@ -193,4 +200,5 @@ def main(
     dist.destroy_process_group()
     if local_rank == 0:  # Only show the results from the main process.
         pprint(info)
-        print(f"\n\nMean TFLOPS/HPU: {info['Model Mean TFLOPS'] / world_size:.1f} TFLOPS\n\n")
+        mean_tflops = info['Model Mean TFLOPS'] / world_size
+        print(f"\n\nMean TFLOPS/HPU: {mean_tflops:.1f} TFLOPS\n\n")
