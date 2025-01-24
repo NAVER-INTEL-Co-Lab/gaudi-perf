@@ -20,8 +20,8 @@ python -m fire matmul/fp8_inc.py measure --measure_mode False
 For arbitrary shapes, run the following commands in order.
 
 ```bash
-python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --measure_mode True
-python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --measure_mode False
+python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --repeats $r --measure_mode True
+python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --repeats $r --measure_mode False
 ```
 """
 import logging
