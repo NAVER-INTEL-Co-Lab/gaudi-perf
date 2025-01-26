@@ -6,8 +6,8 @@ Set these environment variables before starting.
 
 ```bash
 export PT_HPU_WEIGHT_SHARING=0
-export LOG_LEVEL_HQT=1
 export PT_HPU_LAZY_MODE=1
+export LOG_LEVEL_HQT=1
 ```
 
 To run for the provided shapes, run the following command.
@@ -20,8 +20,8 @@ python -m fire matmul/fp8_inc.py measure --measure_mode False
 For arbitrary shapes, run the following commands in order.
 
 ```bash
-python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --measure_mode True
-python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --measure_mode False
+python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --repeats $r --measure_mode True
+python -m fire matmul/fp8_inc.py prof_matmul $m $k $n --repeats $r --measure_mode False
 ```
 """
 import logging
@@ -40,17 +40,23 @@ from neural_compressor.torch.quantization import (
 
 
 class MM(nn.Module):
-    def __init__(self, k: int, n: int):
+    def __init__(self, k: int, n: int, r: int, device: str | torch.device):
         super().__init__()
-        self.layer = nn.Linear(in_features=k, out_features=n, bias=False, device="hpu")
+        self.layers = nn.ModuleList([nn.Linear(
+            in_features=k,
+            out_features=n,
+            bias=False,
+            device=device,
+        ) for _ in range(r)])
 
     def forward(self, x: Tensor):
-        if x.ndim == 3:
-            return [self.layer(xx) for xx in x.unbind(dim=0)]
-        elif x.ndim == 2:
-            return self.layer(x)
-        else:
-            raise NotImplementedError
+        assert x.ndim == 3
+        assert x.size(0) == len(self.layers)
+        outs = list()
+        for i, xx in enumerate(x.unbind(dim=0)):
+            out = self.layers[i](xx)
+            outs.append(out)
+        return outs
 
 
 htcore.hpu_set_env()
@@ -93,9 +99,7 @@ def prof_matmul(
     })
 
     a = torch.randn(size=(repeats, m, k), device="hpu")
-    # The Sequential layer is necessary because INC cannot take a single module.
-    # model = nn.Sequential(nn.Linear(in_features=k, out_features=n, bias=False, device="hpu"))
-    model = MM(k=k, n=n).to(device="hpu")
+    model = MM(k=k, n=n, r=repeats, device="hpu").to(device="hpu")
 
     if measure_mode:
         model_measure = prepare(model, config_measure)
@@ -141,8 +145,7 @@ def measure(
         scale_format: str = "const",
         measure_mode: bool = True,
 ) -> None:
-    # Scale format of `scalar` is supposedly faster.
-    # https://docs.habana.ai/en/v1.18.0/PyTorch/Inference_on_PyTorch/Inference_Using_FP8.html#compile-time-and-throughput-optimization
+    # Scale format of `scalar` might be faster.
     mkn = (
         (16384, 8192, 1280),
         (16384, 1024, 8192),
@@ -151,7 +154,6 @@ def measure(
         (2 ** 12, 2 ** 12, 2 ** 12),
         (2 ** 13, 2 ** 13, 2 ** 13),
         (2 ** 14, 2 ** 14, 2 ** 14),
-        (2 ** 15, 2 ** 15, 2 ** 15),
     )
     kwargs = dict(
         num_steps=num_steps,

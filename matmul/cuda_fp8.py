@@ -4,9 +4,11 @@ Because of this, we recommend using the NGC PyTorch 24.09 image to execute this 
 Use `docker pull nvcr.io/nvidia/pytorch:24.09-py3` to fetch the 24.09 image.
 If the exact version of PyTorch is not the same, the function may not work as expected.
 
-Run the code below using the following command.
+Run the code below using the following commands.
 
-`python -m fire matmul/cuda_fp8.py measure`
+`python -m fire matmul/cuda_fp8.py measure` for Llama 70B training shapes.
+`python -m fire matmul/cuda_fp8.py prof_matmul $m $k $n --repeats $r`
+for user-provided shapes.
 """
 from statistics import mean, median, stdev
 
@@ -46,14 +48,11 @@ class SMM(nn.Module):
 
     @torch.compile(fullgraph=True, dynamic=False)
     def forward(self):  # Equivalent to einsum("bmk,bnk->mn")
-        out = None
+        outs = list()
         kwargs = dict(out_dtype=torch.bfloat16, use_fast_accum=self.use_fast_accum)
         for m1, m2 in zip(self.m1s, self.m2s, strict=True):
-            if out is None:
-                out = torch._scaled_mm(m1, m2.T, self.s1, self.s2, **kwargs)
-            else:
-                out += torch._scaled_mm(m1, m2.T, self.s1, self.s2, **kwargs)
-        return out
+            outs.append(torch._scaled_mm(m1, m2.T, self.s1, self.s2, **kwargs))
+        return outs
 
 
 @torch.inference_mode()
@@ -68,7 +67,6 @@ def prof_matmul(
         repeats: int = 1,  # Increase this value for small matrices below 4Kx4K.
         fp8_config: str = "E4M3",
 ) -> None:
-
     smm = SMM(
         m=m,
         k=k,
@@ -124,7 +122,6 @@ def measure(
         (2 ** 12, 2 ** 12, 2 ** 12, 1),
         (2 ** 13, 2 ** 13, 2 ** 13, 1),
         (2 ** 14, 2 ** 14, 2 ** 14, 1),
-        (2 ** 15, 2 ** 15, 2 ** 15, 1),
     )
 
     for m, k, n, r in mknr:

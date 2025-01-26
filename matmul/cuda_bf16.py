@@ -22,14 +22,11 @@ class MM(nn.Module):
         self.m2s = [torch.randn(size=(n, k), **dd) for _ in range(repeats)]
 
     @torch.compile(fullgraph=True, dynamic=False)
-    def forward(self):  # Equivalent to einsum("bmk,bnk->mn")
-        out = None
+    def forward(self):
+        outs = list()
         for m1, m2 in zip(self.m1s, self.m2s, strict=True):
-            if out is None:
-                out = torch.mm(input=m1, mat2=m2.T)
-            else:
-                out += torch.mm(input=m1, mat2=m2.T)
-        return out
+            outs.append(torch.mm(input=m1, mat2=m2.T))
+        return outs
 
 
 @torch.inference_mode()
@@ -97,7 +94,6 @@ def measure(
         (2 ** 12, 2 ** 12, 2 ** 12, 1),
         (2 ** 13, 2 ** 13, 2 ** 13, 1),
         (2 ** 14, 2 ** 14, 2 ** 14, 1),
-        (2 ** 15, 2 ** 15, 2 ** 15, 1),
     )
 
     for m, k, n, r in mknr:

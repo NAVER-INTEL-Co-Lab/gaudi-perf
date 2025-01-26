@@ -2,7 +2,8 @@
 Note that accumulation always occurs in FP32 in the Gaudi, unlike NVIDIA GPUs.
 
 Run `python -m fire matmul/bf16.py measure` to run for the provided shapes.
-Run `python -m fire matmul/bf16.py prof_matmul $m $k $n` for user-provided shapes.
+Run `python -m fire matmul/bf16.py prof_matmul $m $k $n --repeats $r`
+for user-provided shapes.
 """
 from statistics import mean, median, stdev
 
@@ -24,13 +25,10 @@ class MM(nn.Module):
         self.m2s = [torch.randn(size=(n, k), **dd) for _ in range(repeats)]
 
     def forward(self):  # Equivalent to einsum("bmk,bnk->mn")
-        out = None
+        outs = list()
         for m1, m2 in zip(self.m1s, self.m2s, strict=True):
-            if out is None:
-                out = torch.mm(input=m1, mat2=m2.T)
-            else:
-                out += torch.mm(input=m1, mat2=m2.T)
-        return out
+            outs.append(torch.mm(input=m1, mat2=m2.T))
+        return outs
 
 
 @torch.inference_mode()
@@ -88,7 +86,6 @@ def measure(num_steps: int = 256, data_type: str = "bf16") -> None:
         (2 ** 12, 2 ** 12, 2 ** 12, 1),
         (2 ** 13, 2 ** 13, 2 ** 13, 1),
         (2 ** 14, 2 ** 14, 2 ** 14, 1),
-        (2 ** 15, 2 ** 15, 2 ** 15, 1),
     )
     for m, k, n, r in mknr:
         prof_matmul(m, k, n, num_steps=num_steps, data_type=data_type, repeats=r)
