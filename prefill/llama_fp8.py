@@ -199,7 +199,7 @@ def main(
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
 
     device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
-    dsd = device if world_size == 1 else "meta"
+    dsd = device if (world_size == 1) and (dump_stats_path is not None) else "meta"
     with deepspeed.OnDevice(dtype=torch.bfloat16, device=dsd):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
         model.eval()
