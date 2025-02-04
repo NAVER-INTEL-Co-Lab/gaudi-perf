@@ -190,6 +190,7 @@ def main(
         measure_mode: bool = True,
         use_hpu_graph: bool = True,
         exclude_causal_mask: bool = False,
+        dump_stats_path: str | None = None,
 ):
     deepspeed.init_distributed(dist_backend="hccl")
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
@@ -219,7 +220,8 @@ def main(
         prepare,
         finalize_calibration,
     )
-    dump_stats_path = f"./inc_output/measure_{model_name}_{seq_len}_{fp8_config}"
+    if dump_stats_path is None:
+        dump_stats_path = f"./inc_output/measure_{model_name}_{seq_len}_{fp8_config}"
     blocklist_names = ["lm_head", "fused_scaled_dot_product_attention"]
     config_measure = FP8Config.from_dict({
         "fp8_config": fp8_config,
