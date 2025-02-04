@@ -209,6 +209,7 @@ def main(
         dtype=torch.bfloat16,
         tensor_parallel={"tp_size": world_size},
         enable_cuda_graph=use_hpu_graph,
+        set_empty_params=(dsd == "meta"),
         max_out_tokens=1,
         min_out_tokens=1,
     )
