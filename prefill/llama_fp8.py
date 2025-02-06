@@ -190,6 +190,7 @@ def main(
         measure_mode: bool = True,
         use_hpu_graph: bool = True,
         exclude_causal_mask: bool = False,
+        dump_stats_path: str | None = None,
 ):
     deepspeed.init_distributed(dist_backend="hccl")
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
@@ -198,7 +199,7 @@ def main(
     config = AutoConfig.from_pretrained(model_name, torch_dtype=torch.bfloat16)
 
     device = torch.device("hpu")  # HPUs do not have numbers, unlike NVIDIA GPUs.
-    dsd = device if world_size == 1 else "meta"
+    dsd = device if (world_size == 1) and (dump_stats_path is None) else "meta"
     with deepspeed.OnDevice(dtype=torch.bfloat16, device=dsd):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
         model.eval()
@@ -208,6 +209,7 @@ def main(
         dtype=torch.bfloat16,
         tensor_parallel={"tp_size": world_size},
         enable_cuda_graph=use_hpu_graph,
+        set_empty_params=True,
         max_out_tokens=1,
         min_out_tokens=1,
     )
@@ -219,7 +221,8 @@ def main(
         prepare,
         finalize_calibration,
     )
-    dump_stats_path = f"./inc_output/measure_{model_name}_{seq_len}_{fp8_config}"
+    if dump_stats_path is None:
+        dump_stats_path = f"./inc_output/measure_{model_name}_{seq_len}_{fp8_config}"
     blocklist_names = ["lm_head", "fused_scaled_dot_product_attention"]
     config_measure = FP8Config.from_dict({
         "fp8_config": fp8_config,
