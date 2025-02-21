@@ -64,7 +64,7 @@ def prof_matmul(
     # Using the exact matmul flops equation.
     tfps = [1e-9 * repeats * m * n * (2 * k - 1) / ms for ms in mss]
     print(
-        f"({m:5} x {k:5})x({k:5}x{n:5}): "
+        f"({m:5}x{k:5})x({k:5}x{n:5}): "
         f"Mean {mean(tfps):5.1f} TFLOPS, "
         f"Median {median(tfps):5.1f} TFLOPS, "
         f"Min {min(tfps):5.1f} TFLOPS, "
