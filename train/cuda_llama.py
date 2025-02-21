@@ -88,18 +88,17 @@ class TELlamaDecoderLayer(te.pytorch.TransformerLayer):
 
 
 class TELlamaForCausalLM:
-    """
-    Causal LM created with `LlamaModel`. The underlying `LlamaDecoderLayer`
-    class is monkey-patched with `TELlamaDecoderLayer` class before
-    initializing the causal LM with `LlamaForCausalLM`.
-
-    Modified from the version in Transformer Engine for better performance.
-
-    Args:
-        config: LlamaConfig
-    """
-
     def __new__(cls, config: LlamaConfig):
+        """
+        Causal LM created with `LlamaModel`. The underlying `LlamaDecoderLayer`
+        class is monkey-patched with `TELlamaDecoderLayer` class before
+        initializing the causal LM with `LlamaForCausalLM`.
+
+        Modified from the version in Transformer Engine for better performance.
+
+        Args:
+            config: LlamaConfig
+        """
         with replace_decoder(te_decoder_cls=TELlamaDecoderLayer):
             llama_for_causal_lm = LlamaForCausalLM(config)
         llama_for_causal_lm.lm_head = te.pytorch.Linear(
@@ -195,7 +194,7 @@ def train(
         apply_liger_kernel_to_llama(
             rope=False,
             cross_entropy=False,
-            fused_linear_cross_entropy=True,  # For 8K only, frankly.
+            fused_linear_cross_entropy=True,  # For 8K+ on Llama 8B.
             rms_norm=False,
             swiglu=False,
             model=None,
