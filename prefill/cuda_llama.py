@@ -75,6 +75,7 @@ def main(
         seq_len: int,
         num_steps: int,
         batch_size: int = 1,
+        warmup_steps: int = 4,
         tensor_parallel_size: int = 8,
         exclude_causal_mask: bool = False,
         quantization: str | None = None,
@@ -106,30 +107,29 @@ def main(
     tic = torch.cuda.Event(enable_timing=True)
     toc = torch.cuda.Event(enable_timing=True)
 
-    for _ in range(16):  # Warmup
-        x = torch.randint(
-            low=0,
-            high=config.vocab_size,
-            size=(batch_size, seq_len),
-            dtype=torch.int64,
-        ).tolist()
-        tps = [TokensPrompt(prompt_token_ids=xs) for xs in x]
-        model.generate(tps, sampling_params=sampling_params, use_tqdm=False)
+    xss = torch.randint(
+        low=0,
+        high=config.vocab_size,
+        size=(warmup_steps, batch_size, seq_len),
+        dtype=torch.int64,
+    ).tolist()
+    tps = [[TokensPrompt(prompt_token_ids=x) for x in xs] for xs in xss]
+
+    for i in range(16):  # Warmup
+        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=False)
+
+    xss = torch.randint(
+        low=0,
+        high=config.vocab_size,
+        size=(num_steps, batch_size, seq_len),
+        dtype=torch.int64,
+    ).tolist()
+    tps = [[TokensPrompt(prompt_token_ids=x) for x in xs] for xs in xss]
 
     tic.wait()
     tic.record()
-    for _ in range(num_steps):
-        x = torch.randint(
-            low=0,
-            high=config.vocab_size,
-            size=(seq_len,),
-            dtype=torch.int64,
-        ).tolist()
-        model.generate(
-            TokensPrompt(prompt_token_ids=x),
-            sampling_params=sampling_params,
-            use_tqdm=False,
-        )
+    for i in range(num_steps):
+        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=False)
     toc.record()
     torch.cuda.synchronize()
     ms = tic.elapsed_time(toc)
