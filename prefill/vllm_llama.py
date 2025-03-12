@@ -105,8 +105,8 @@ def main(
         model_name,
         tensor_parallel_size=tensor_parallel_size,
         dtype=torch.bfloat16,
-        # enable_chunked_prefill=False,  # Enabled by default if the input is 32K+
-        # max_seq_len_to_capture=seq_len,  # Use HPU graphs.
+        enable_chunked_prefill=False,  # Enabled by default if the input is 32K+
+        max_seq_len_to_capture=seq_len,  # Use HPU graphs.
         block_size=block_size,
     )
     sampling_params = SamplingParams(max_tokens=1)

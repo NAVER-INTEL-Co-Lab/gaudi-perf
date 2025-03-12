@@ -13,7 +13,7 @@ export PT_HPU_ENABLE_LAZY_COLLECTIVES=true
 # Disable HPU graphs during measurement to save memory.
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama_fp8.py main \
-    --model_name meta-llama/Llama-3.1-70B \
+    --model_name meta-llama/Llama-3.3-70B-Instruct \
     --seq_len $((4 * 1024)) \
     --num_steps 32 \
     --measure_mode True \
@@ -23,7 +23,7 @@ deepspeed --no_local_rank --num_gpus 8 \
 # Enable HPU graphs if possible for better throughput.
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama_fp8.py main \
-    --model_name meta-llama/Llama-3.1-70B \
+    --model_name meta-llama/Llama-3.3-70B-Instruct \
     --seq_len $((4 * 1024)) \
     --num_steps 32 \
     --measure_mode False \
