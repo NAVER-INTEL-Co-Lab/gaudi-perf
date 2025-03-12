@@ -1,2 +1,3 @@
 # Remove pre-installed `pip` packages that should use the versions installed via `conda` instead.
 dataclasses  # Unnecessary for Python 3.7+.
+pydantic  # Version mismatch for new installs.
