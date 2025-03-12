@@ -1,5 +1,6 @@
 # Do not delete `sudo`, `tzdata`, or `zsh` as they are required for the build.
 sudo
+nano
 tmux
 tzdata
 zsh

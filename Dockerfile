@@ -52,7 +52,7 @@ ARG conda=/opt/conda/bin/${CONDA_MANAGER}
 RUN curl -fksSL -o /tmp/conda/miniconda.sh ${CONDA_URL} && \
     /bin/bash /tmp/conda/miniconda.sh -b -p /opt/conda && \
     printf "channels:\n  - conda-forge\n  - nodefaults\nssl_verify: false\n" > /opt/conda/.condarc && \
-    $conda install python=$(python -V | cut -d ' ' -f2) && \
+    $conda install python=$(python3 -V | cut -d ' ' -f2) && \
     $conda clean -fya && rm -rf /tmp/conda/miniconda.sh && \
     find /opt/conda -type d -name '__pycache__' | xargs rm -rf
 
@@ -105,7 +105,7 @@ RUN --mount=type=bind,from=stash,source=/tmp/apt,target=/tmp/apt \
 
 # Remove pre-installed `pip` packages that should use the versions installed via `conda` instead.
 RUN --mount=type=bind,from=stash,source=/tmp/pip,target=/tmp/pip \
-    python -m pip uninstall -y -r /tmp/pip/uninstalls.txt
+    python3 -m pip uninstall -y -r /tmp/pip/uninstalls.txt
 
 ########################################################################
 FROM train-base AS train-adduser-include
@@ -116,7 +116,9 @@ ARG GRP
 ARG USR
 ARG PASSWD=ubuntu
 # Create user with password-free `sudo` permissions.
-RUN groupadd -f -g ${GID} ${GRP} && \
+RUN if [ $(getent passwd 1000) ] && [ ${UID} = 1000 ]; \
+    then deluser --remove-home $(id -un 1000); fi && \
+    groupadd -f -g ${GID} ${GRP} && \
     useradd --shell $(which zsh) --create-home -u ${UID} -g ${GRP} \
         -p $(openssl passwd -1 ${PASSWD}) ${USR} && \
     echo "${USR} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -145,10 +147,10 @@ COPY --link --from=stash /opt/zsh/zsh-syntax-highlighting ${ZSHS_PATH}
 
 ARG TMUX_HIST_LIMIT
 # Search for additional Python packages installed via `conda`.
-RUN ln -s /opt/conda/lib/$(python -V | awk -F '[ \.]' '{print "python" $2 "." $3}') \
+RUN ln -s /opt/conda/lib/$(python3 -V | awk -F '[ \.]' '{print "python" $2 "." $3}') \
     /opt/conda/lib/python3 && \
     # Create a symbolic link to add Python `site-packages` to `PYTHONPATH`.
-    ln -s /usr/local/lib/$(python -V | awk -F '[ \.]' '{print "python" $2 "." $3}') \
+    ln -s /usr/local/lib/$(python3 -V | awk -F '[ \.]' '{print "python" $2 "." $3}') \
     /usr/local/lib/python3 && \
     # Setting the prompt to `pure`.
     {   echo "fpath+=${PURE_PATH}"; \
