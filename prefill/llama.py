@@ -6,7 +6,7 @@ Example run command below.
 export PT_HPU_ENABLE_LAZY_COLLECTIVES=true
 deepspeed --no_local_rank --num_gpus 8 \
     --module fire prefill/llama.py main \
-    --model_name meta-llama/Llama-3.1-70B \
+    --model_name meta-llama/Llama-3.3-70B-Instruct \
     --seq_len $((8 * 1024)) \
     --num_steps 32
 ```

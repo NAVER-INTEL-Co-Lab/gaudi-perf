@@ -6,7 +6,11 @@ Run using the command below after logging into HuggingFace with `huggingface-cli
 The `transformers` version must be compatible with Llama v3.1 for this example.
 
 ```bash
-python -m fire prefill/cuda_llama.py main \
+export VLLM_SKIP_WARMUP=true
+export PT_HPU_LAZY_MODE=1
+export PT_HPU_ENABLE_LAZY_COLLECTIVES=true
+
+python -m fire prefill/llama_vllm.py main \
     --model_name meta-llama/Llama-3.3-70B-Instruct \
     --seq_len $((8 * 1024)) \
     --num_steps 32
@@ -24,6 +28,9 @@ Note that the true throughput is better than the measurement because
 we are unable to remove the overhead from the `generate` method.
 """
 import torch
+import habana_frameworks.torch.hpu as ht
+from habana_frameworks.torch.hpu import Event
+import habana_frameworks.torch.distributed.hccl  # noqa
 from transformers import AutoConfig
 from vllm import LLM, SamplingParams
 from vllm.inputs import TokensPrompt
@@ -78,7 +85,7 @@ def main(
         warmup_steps: int = 4,
         tensor_parallel_size: int = 8,
         exclude_causal_mask: bool = False,
-        quantization: str | None = None,
+        block_size: int = 128,
         use_tqdm: bool = False,
 ):
     config = AutoConfig.from_pretrained(model_name)
@@ -96,17 +103,17 @@ def main(
     ) * 2  # 1 MAC is approximately 2 FLOPs.
 
     model = LLM(
-        model_name, 
-        tensor_parallel_size=tensor_parallel_size, 
+        model_name,
+        tensor_parallel_size=tensor_parallel_size,
         dtype=torch.bfloat16,
-        quantization=quantization,
         enable_chunked_prefill=False,  # Enabled by default if the input is 32K+
-        max_seq_len_to_capture=seq_len,  # Use CUDA graphs.
+        max_seq_len_to_capture=seq_len,  # Use HPU graphs.
+        block_size=block_size,  # Gaudi works best with block size 128 or 256.
     )
     sampling_params = SamplingParams(max_tokens=1)
 
-    tic = torch.cuda.Event(enable_timing=True)
-    toc = torch.cuda.Event(enable_timing=True)
+    tic = Event(enable_timing=True)
+    toc = Event(enable_timing=True)
 
     xss = torch.randint(
         low=0,
@@ -130,9 +137,9 @@ def main(
     tic.wait()
     tic.record()
     for i in range(num_steps):
-        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=use_tqdm)
+        model.generate(tps[i],sampling_params=sampling_params, use_tqdm=use_tqdm)
     toc.record()
-    torch.cuda.synchronize()
+    ht.synchronize()
     ms = tic.elapsed_time(toc)
 
     tfps = flops * batch_size * num_steps * 1e-9 / tensor_parallel_size / ms
