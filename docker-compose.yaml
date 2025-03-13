@@ -107,5 +107,5 @@ services:
       args:
         OS: ${OS:-ubuntu24.04}
         PYTORCH_VERSION: ${PYTORCH_VERSION:-2.7.0}
-        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-1.12.0}
+        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-1.20.0}
         IMAGE_TAG: ${IMAGE_TAG:-latest}
