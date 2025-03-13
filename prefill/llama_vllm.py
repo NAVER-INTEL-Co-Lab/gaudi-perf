@@ -10,7 +10,7 @@ export VLLM_SKIP_WARMUP=true
 export PT_HPU_LAZY_MODE=1
 export PT_HPU_ENABLE_LAZY_COLLECTIVES=true
 
-python -m fire prefill/vllm_llama.py main \
+python -m fire prefill/llama_vllm.py main \
     --model_name meta-llama/Llama-3.3-70B-Instruct \
     --seq_len $((8 * 1024)) \
     --num_steps 32
