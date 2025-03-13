@@ -79,6 +79,7 @@ def main(
         tensor_parallel_size: int = 8,
         exclude_causal_mask: bool = False,
         quantization: str | None = None,
+        use_tqdm: bool = False,
 ):
     config = AutoConfig.from_pretrained(model_name)
 
@@ -116,7 +117,7 @@ def main(
     tps = [[TokensPrompt(prompt_token_ids=x) for x in xs] for xs in xss]
 
     for i in range(warmup_steps):  # Warmup
-        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=False)
+        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=use_tqdm)
 
     xss = torch.randint(
         low=0,
@@ -129,10 +130,11 @@ def main(
     tic.wait()
     tic.record()
     for i in range(num_steps):
-        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=False)
+        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=use_tqdm)
     toc.record()
     torch.cuda.synchronize()
     ms = tic.elapsed_time(toc)
 
     tfps = flops * batch_size * num_steps * 1e-9 / tensor_parallel_size / ms
-    print(f"\n\nTFLOPS/GPU: {tfps:.1f}\n\n")
+    flop = flops * batch_size * num_steps * 1e-12 / tensor_parallel_size
+    print(f"\n\nTFLOPS/HPU: {tfps:.1f}. TFLOPs/HPU: {flop:.1f}. Time: {ms:.1f} ms.\n\n")

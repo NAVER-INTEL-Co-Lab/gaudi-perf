@@ -86,6 +86,7 @@ def main(
         tensor_parallel_size: int = 8,
         exclude_causal_mask: bool = False,
         block_size: int = 128,
+        use_tqdm: bool = False,
 ):
     config = AutoConfig.from_pretrained(model_name)
 
@@ -107,7 +108,7 @@ def main(
         dtype=torch.bfloat16,
         enable_chunked_prefill=False,  # Enabled by default if the input is 32K+
         max_seq_len_to_capture=seq_len,  # Use HPU graphs.
-        block_size=block_size,
+        block_size=block_size,  # Gaudi works best with block size 128 or 256.
     )
     sampling_params = SamplingParams(max_tokens=1)
 
@@ -123,7 +124,7 @@ def main(
     tps = [[TokensPrompt(prompt_token_ids=x) for x in xs] for xs in xss]
 
     for i in range(warmup_steps):  # Warmup
-        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=True)
+        model.generate(tps[i], sampling_params=sampling_params, use_tqdm=use_tqdm)
 
     xss = torch.randint(
         low=0,
@@ -136,7 +137,7 @@ def main(
     tic.wait()
     tic.record()
     for i in range(num_steps):
-        model.generate(tps[i],sampling_params=sampling_params, use_tqdm=True)
+        model.generate(tps[i],sampling_params=sampling_params, use_tqdm=use_tqdm)
     toc.record()
     ht.synchronize()
     ms = tic.elapsed_time(toc)
