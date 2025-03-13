@@ -222,7 +222,7 @@ def main(
         finalize_calibration,
     )
     if dump_stats_path is None:
-        dump_stats_path = f"./inc_output/measure_{model_name}_{seq_len}_{fp8_config}"
+        dump_stats_path = f"./inc_output/measure_{model_name}_{fp8_config}"
     blocklist_names = ["lm_head", "fused_scaled_dot_product_attention"]
     config_measure = FP8Config.from_dict({
         "fp8_config": fp8_config,
@@ -246,7 +246,7 @@ def main(
 
     if measure_mode:
         model_measure = prepare(model.module, config_measure)
-        htcore.hpu_inference_initialize(model_measure, mark_only_scales_as_const=True)
+        htcore.hpu_inference_initialize(model_measure, mark_scales=True)
         htrandom.manual_seed_all(9872)  # TP inputs must be the same across devices.
 
         for _ in range(8):
@@ -262,7 +262,7 @@ def main(
 
     else:
         model_quant = convert(model.module, config_quantize)
-        htcore.hpu_inference_initialize(model_quant, mark_only_scales_as_const=True)
+        htcore.hpu_inference_initialize(model_quant, mark_scales=True)
 
         info = measure(
             model=model_quant,
