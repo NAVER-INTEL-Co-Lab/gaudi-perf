@@ -115,7 +115,7 @@ def main(
     ).tolist()
     tps = [[TokensPrompt(prompt_token_ids=x) for x in xs] for xs in xss]
 
-    for i in range(16):  # Warmup
+    for i in range(warmup_steps):  # Warmup
         model.generate(tps[i], sampling_params=sampling_params, use_tqdm=False)
 
     xss = torch.randint(
