@@ -16,6 +16,7 @@ For power measurements, use one of the following commands on the host.
 The container will likely not have `ipmitool` available.
 
 ```bash
+sudo ipmitool dcmi power reading
 sudo ipmitool dcmi power reading 5_sec
 sudo ipmitool sensor get Total_Power
 ```
