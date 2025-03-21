@@ -57,7 +57,7 @@ from habana_frameworks.torch.hpu import Event  # noqa
 from transformers import AutoConfig, AutoModelForCausalLM
 
 
-htcore.hpu_set_env()
+htcore.hpu_set_inference_env()
 adapt_transformers_to_gaudi()
 
 
