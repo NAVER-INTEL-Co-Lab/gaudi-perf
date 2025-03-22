@@ -84,8 +84,9 @@ def measure(
         model,
         model_name: str,
         seq_len: int,
-        batch_size: int,
         num_steps: int,
+        warmup_steps: int,
+        batch_size: int,
         exclude_causal_mask: bool,
 ) -> dict:
     config = AutoConfig.from_pretrained(model_name)
@@ -121,7 +122,7 @@ def measure(
         attn_softmax_bf16=True,
     )
 
-    for _ in range(16):  # Warmup
+    for _ in range(warmup_steps):  # Warmup
         model(x, **forward_kwargs)
 
     tics = [Event(enable_timing=True) for _ in range(num_steps)]
@@ -161,6 +162,7 @@ def measure(
 def main(
         model_name: str,
         num_steps: int = 16,
+        warmup_steps: int = 4,
         batch_size: int = 1,
         seq_len: int = 4096,
         exclude_causal_mask: bool = False,
@@ -188,9 +190,10 @@ def main(
     info = measure(
         model=model,
         model_name=model_name,
-        batch_size=batch_size,
         seq_len=seq_len,
         num_steps=num_steps,
+        warmup_steps=warmup_steps,
+        batch_size=batch_size,
         exclude_causal_mask=exclude_causal_mask,
     )
     info.update({
