@@ -16,6 +16,7 @@ For power measurements, use one of the following commands on the host.
 The container will likely not have `ipmitool` available.
 
 ```bash
+sudo ipmitool dcmi power reading
 sudo ipmitool dcmi power reading 5_sec
 sudo ipmitool sensor get Total_Power
 ```
@@ -137,4 +138,4 @@ def main(
 
     tfps = flops * batch_size * num_steps * 1e-9 / tensor_parallel_size / ms
     flop = flops * batch_size * num_steps * 1e-12 / tensor_parallel_size
-    print(f"\n\nTFLOPS/HPU: {tfps:.1f}. TFLOPs/HPU: {flop:.1f}. Time: {ms:.1f} ms.\n\n")
+    print(f"\n\nTFLOPS/GPU: {tfps:.1f}. TFLOPs/GPU: {flop:.1f}. Time: {ms:.1f} ms.\n\n")
