@@ -10,6 +10,7 @@ deepspeed --no_local_rank --num_gpus 8 \
     --use_liger_kernel True
 """
 import os
+import warnings
 from contextlib import contextmanager
 
 import torch
@@ -23,9 +24,12 @@ from transformers.models.llama.modeling_llama import (
     LlamaForCausalLM,
     LlamaConfig,
 )
-import transformer_engine as te
-from transformer_engine.pytorch.attention import RotaryPositionEmbedding
 import deepspeed
+import transformer_engine.pytorch as te
+try:
+    from transformer_engine.pytorch.attention import RotaryPositionEmbedding
+except ImportError:
+    from transformer_engine.pytorch.dot_product_attention.rope import RotaryPositionEmbedding
 
 
 @contextmanager
@@ -41,7 +45,7 @@ def replace_decoder(te_decoder_cls):
         transformers.models.llama.modeling_llama.LlamaDecoderLayer = original_llama_decoder_cls
 
 
-class TELlamaDecoderLayer(te.pytorch.TransformerLayer):
+class TELlamaDecoderLayer(te.TransformerLayer):
     """
     Wrapper class over TE's `TransformerLayer`. This makes the wrapper very
     similar to HF's `LlamaDecoderLayer` and easier to replace it in the code.
@@ -70,7 +74,7 @@ class TELlamaDecoderLayer(te.pytorch.TransformerLayer):
         te_rope = RotaryPositionEmbedding(config.hidden_size // config.num_attention_heads)
         self.rope_emb = te_rope(max_seq_len=config.max_position_embeddings)
 
-    def forward(self, hidden_states, *args, attention_mask, **kwargs):
+    def forward(self, hidden_states, *args, attention_mask=None, **kwargs):
         """
         Custom forward to make sure we only pass relevant arguments to the
         forward pass of the `TransformerLayer`. Also, make sure the output
@@ -81,8 +85,6 @@ class TELlamaDecoderLayer(te.pytorch.TransformerLayer):
                 hidden_states,
                 attention_mask=attention_mask,
                 rotary_pos_emb=self.rope_emb,
-                # Selective activation checkpointing is always enabled.
-                checkpoint_core_attention=True,
             ),
         )
 
@@ -101,12 +103,12 @@ class TELlamaForCausalLM:
         """
         with replace_decoder(te_decoder_cls=TELlamaDecoderLayer):
             llama_for_causal_lm = LlamaForCausalLM(config)
-        llama_for_causal_lm.lm_head = te.pytorch.Linear(
+        llama_for_causal_lm.lm_head = te.Linear(
             config.hidden_size,
             config.vocab_size,
             bias=False,
         )
-        llama_for_causal_lm.model.norm = te.pytorch.RMSNorm(
+        llama_for_causal_lm.model.norm = te.RMSNorm(
             config.hidden_size,
             eps=config.rms_norm_eps,
         )
@@ -176,29 +178,44 @@ def get_optim_groups(model: nn.Module, weight_decay: float = 0.1):
 
 def train(
         model_name: str,
-        max_iters: int = 4,
+        num_steps: int = 4,
         seq_len: int = 4096,
         zero_stage: int = 3,
         checkpoint_gradients: bool = False,
         batch_size: int = 64,
         micro_batch_size: int = 1,
+        use_te_llama: bool = True,
+        tensor_parallel_size: int = 1,
         offload_optimizer: bool = True,
         offload_param: bool = True,
         full_bf16: bool = False,
         use_liger_kernel: bool = False,
         exclude_causal_mask: bool = False,
 ):
+    if use_te_llama and tensor_parallel_size > 1:
+        warnings.warn("TE and DeepSpeed auto-TP do not mix well.")
+
     deepspeed.init_distributed(dist_backend="nccl")
-    if use_liger_kernel:
+    if use_liger_kernel:  # Only import if used.
         from liger_kernel.transformers import apply_liger_kernel_to_llama
-        apply_liger_kernel_to_llama(
-            rope=False,
-            cross_entropy=False,
-            fused_linear_cross_entropy=True,  # For 8K+ on Llama 8B.
-            rms_norm=False,
-            swiglu=False,
-            model=None,
-        )
+        if use_te_llama:
+            apply_liger_kernel_to_llama(
+                rope=False,
+                cross_entropy=False,
+                fused_linear_cross_entropy=True,  # For 8K+ on Llama 8B.
+                rms_norm=False,
+                swiglu=False,
+                model=None,
+            )
+        else:
+            apply_liger_kernel_to_llama(
+                rope=True,
+                cross_entropy=False,
+                fused_linear_cross_entropy=True,
+                rms_norm=True,
+                swiglu=True,
+                model=None,
+            )
 
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
     world_size = int(os.getenv("WORLD_SIZE", "1"))
@@ -214,6 +231,7 @@ def train(
         "zero_optimization": {
             "stage": zero_stage,
             "overlap_comm": True,
+            "gather_16bit_weights_on_model_save": tensor_parallel_size > 1,
         },
         "optimizer": {
             "type": "Adam",  # Uses AdamW by default.
@@ -231,6 +249,8 @@ def train(
         ds_config.update({"offload_optimizer": {"device": "cpu", "pin_memory": True}})
     if offload_param:
         ds_config.update({"offload_param": {"device": "cpu", "pin_memory": True}})
+    if tensor_parallel_size > 1:
+        ds_config.update({"tensor_parallel": {"autotp_size": tensor_parallel_size}})
 
     config = AutoConfig.from_pretrained(model_name)
     macs = approx_llama_forward_macs(
@@ -248,7 +268,12 @@ def train(
 
     with torch.cuda.device(device=device):
         config.use_cache = False  # Prevent errors from HF.
-        model = TELlamaForCausalLM(config=config)
+        if use_te_llama:
+            model = TELlamaForCausalLM(config=config)
+        else:
+            model = LlamaForCausalLM(config=config)
+
+    model.tie_weights()  # Only ties weights if configured to do so.
     model.train()
     if full_bf16:  # This is usually a terrible idea for training stability.
         model = model.to(torch.bfloat16)
@@ -268,6 +293,7 @@ def train(
     engine.train()
 
     iter_num = 0
+    torch.manual_seed(seed=9872)  # For TP consistency.
     x = torch.randint(config.vocab_size, size=(micro_batch_size, seq_len), device=device)
     y = torch.randint(config.vocab_size, size=(micro_batch_size, seq_len), device=device)
     tic = Event(enable_timing=True)
@@ -277,7 +303,7 @@ def train(
         print("Starting training. The first few iterations may be slow due to warmup.")
 
     tic.record()
-    while iter_num < max_iters:
+    while iter_num < num_steps:
         engine.backward(engine(x, labels=y).loss)
         engine.step()
 
