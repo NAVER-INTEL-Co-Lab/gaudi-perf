@@ -16,4 +16,4 @@ dependencies: # Use conda packages if possible.
   - pip  # For `pip` dependencies that are not available in conda.
   - pip:
       # Modify the version tag as necessary.
-      - git+https://github.com/huggingface/optimum-habana@v1.16.0
+      - git+https://github.com/huggingface/optimum-habana@v1.17.0
